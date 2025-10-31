@@ -35,4 +35,18 @@ return [
         ],
     ],
 
+    'greenapi' => [
+        'url' => env('API_URL', 'https://1105.api.green-api.com'),
+        'id_instance' => env('ID_INSTANCE'),
+        'api_token' => env('API_TOKEN_INSTANCE'),
+    ],
+
+    'openai' => [
+        'api_key' => env('OPENAI_API_KEY'),
+        'vector_store_id' => env('VECTOR_STORE_ID'),
+        'use_proxy' => env('USE_PROXY', false),
+        'proxy_host' => env('PROXY_HOST'),
+        'proxy_port' => env('PROXY_PORT'),
+    ],
+
 ];

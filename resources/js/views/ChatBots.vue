@@ -12,10 +12,9 @@ const selectedBot = ref<ChatBot | null>(null);
 const showCreateBotModal = ref(false);
 
 const newBotForm = ref({
-    name: '',
-    platform: 'max' as 'whatsapp' | 'telegram' | 'max',
-    client_phone: '',
-    object_id: '',
+    chat_id: '',
+    object_id: 0,
+    bot_config_id: undefined as number | undefined,
 });
 
 const loading = computed(() => botStore.loading);
@@ -35,9 +34,9 @@ const selectBot = async (bot: ChatBot) => {
 
 // Handle delete bot
 const deleteBot = async (bot: ChatBot) => {
-    if (confirm(`Вы уверены, что хотите удалить бота "${bot.name}"?`)) {
-        await botStore.deleteChatBot(bot.id);
-        if (selectedBot.value?.id === bot.id) {
+    if (confirm(`Вы уверены, что хотите остановить бота "${bot.chat_id}"?`)) {
+        await botStore.deleteChatBot(bot.chat_id);
+        if (selectedBot.value?.chat_id === bot.chat_id) {
             selectedBot.value = null;
         }
     }
@@ -45,7 +44,7 @@ const deleteBot = async (bot: ChatBot) => {
 
 // Create bot
 const createBot = async () => {
-    if (!newBotForm.value.name || !newBotForm.value.object_id) {
+    if (!newBotForm.value.chat_id || !newBotForm.value.object_id) {
         alert('Заполните все обязательные поля');
         return;
     }
@@ -53,7 +52,7 @@ const createBot = async () => {
     try {
         await botStore.createChatBot(newBotForm.value);
         showCreateBotModal.value = false;
-        newBotForm.value = { name: '', platform: 'max', client_phone: '', object_id: '' };
+        newBotForm.value = { chat_id: '', object_id: 0, bot_config_id: undefined };
     } catch (err) {
         console.error('Failed to create bot:', err);
     }
@@ -62,8 +61,15 @@ const createBot = async () => {
 // Toggle bot status
 const toggleBot = async (bot: ChatBot) => {
     try {
-        const newStatus = bot.status === 'online' ? 'offline' : 'online';
-        await botStore.updateChatBot(bot.id, { status: newStatus });
+        if (bot.status === 'running') {
+            await botStore.deleteChatBot(bot.chat_id);
+        } else {
+            await botStore.createChatBot({
+                chat_id: bot.chat_id,
+                object_id: bot.object_id,
+                bot_config_id: bot.bot_config_id,
+            });
+        }
     } catch (err) {
         console.error('Failed to toggle bot:', err);
     }
@@ -73,11 +79,7 @@ const toggleBot = async (bot: ChatBot) => {
 const stopAllBots = async () => {
     if (confirm('Остановить всех ботов?')) {
         try {
-            for (const bot of botStore.chatBots) {
-                if (bot.status === 'online') {
-                    await botStore.updateChatBot(bot.id, { status: 'offline' });
-                }
-            }
+            await botStore.stopAllBots();
         } catch (err) {
             console.error('Failed to stop all bots:', err);
         }
@@ -137,7 +139,7 @@ const sendMessage = async (content: string) => {
               v-for="bot in botStore.chatBots"
               :key="bot.id"
               :bot="bot"
-              :selected="selectedBot?.id === bot.id"
+              :selected="selectedBot?.chat_id === bot.chat_id"
               @select="selectBot"
               @edit="() => {}"
               @delete="deleteBot"
@@ -150,7 +152,7 @@ const sendMessage = async (content: string) => {
         <div v-if="selectedBot" class="chat-section">
           <div class="chat-header">
             <div class="chat-header__info">
-              <h2>{{ selectedBot.name }}</h2>
+              <h2>{{ selectedBot.chat_id }}</h2>
               <span class="chat-platform">{{ selectedBot.platform }}</span>
             </div>
           </div>
@@ -176,38 +178,21 @@ const sendMessage = async (content: string) => {
           </div>
           <div class="modal__body">
             <div class="form-group">
-              <label class="form-label">Название *</label>
+              <label class="form-label">WhatsApp Chat ID *</label>
               <input
-                v-model="newBotForm.name"
+                v-model="newBotForm.chat_id"
                 type="text"
                 class="form-input"
-                placeholder="Название бота"
-              />
-            </div>
-            <div class="form-group">
-              <label class="form-label">Платформа *</label>
-              <select v-model="newBotForm.platform" class="form-input">
-                <option value="max">MAX</option>
-                <option value="whatsapp">WhatsApp</option>
-                <option value="telegram">Telegram</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Телефон клиента</label>
-              <input
-                v-model="newBotForm.client_phone"
-                type="text"
-                class="form-input"
-                placeholder="+7... (опционально)"
+                placeholder="79001234567@c.us"
               />
             </div>
             <div class="form-group">
               <label class="form-label">ID объекта *</label>
               <input
-                v-model="newBotForm.object_id"
-                type="text"
+                v-model.number="newBotForm.object_id"
+                type="number"
                 class="form-input"
-                placeholder="ID объекта"
+                placeholder="508437"
               />
             </div>
           </div>

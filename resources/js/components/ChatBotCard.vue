@@ -20,9 +20,9 @@ const emit = defineEmits<{
 
 const statusClass = computed(() => {
     switch (props.bot.status) {
-        case 'online':
+        case 'running':
             return 'status--online';
-        case 'processing':
+        case 'completed':
             return 'status--processing';
         default:
             return 'status--offline';
@@ -31,12 +31,12 @@ const statusClass = computed(() => {
 
 const statusLabel = computed(() => {
     switch (props.bot.status) {
-        case 'online':
-            return 'Онлайн';
-        case 'processing':
-            return 'Обработка';
+        case 'running':
+            return 'Работает';
+        case 'completed':
+            return 'Завершен';
         default:
-            return 'Офлайн';
+            return 'Остановлен';
     }
 });
 
@@ -67,7 +67,7 @@ const platformLabel = computed(() => {
     >
         <div class="chat-bot-card__header">
             <div class="chat-bot-card__title">
-                <h3>{{ bot.name }}</h3>
+                <h3>{{ bot.chat_id }}</h3>
                 <span class="status" :class="statusClass">{{ statusLabel }}</span>
             </div>
             <div class="chat-bot-card__actions">
@@ -95,10 +95,6 @@ const platformLabel = computed(() => {
                         {{ platformLabel }}
                     </span>
                 </div>
-                <div class="info-item" v-if="bot.client_phone">
-                    <span class="info-label">Телефон:</span>
-                    <span class="info-value">{{ bot.client_phone }}</span>
-                </div>
                 <div class="info-item">
                     <span class="info-label">ID объекта:</span>
                     <span class="info-value">{{ bot.object_id }}</span>
@@ -106,24 +102,14 @@ const platformLabel = computed(() => {
             </div>
         </div>
         
-        <div class="chat-bot-card__footer">
-            <div class="stat-item">
-                <span class="stat-number">{{ bot.active_sessions_count }}</span>
-                <span class="stat-label">Активных сессий</span>
-            </div>
-            <div class="stat-item">
-                <span class="stat-number">{{ bot.total_messages }}</span>
-                <span class="stat-label">Сообщений</span>
-            </div>
-        </div>
         
         <div class="chat-bot-card__controls">
             <button 
                 class="btn btn--sm"
-                :class="bot.status === 'online' ? 'btn--danger' : 'btn--success'"
+                :class="bot.status === 'running' ? 'btn--danger' : 'btn--success'"
                 @click.stop="emit('toggle', bot)"
             >
-                {{ bot.status === 'online' ? '⏸️ Остановить' : '▶️ Запустить' }}
+                {{ bot.status === 'running' ? '⏸️ Остановить' : '▶️ Запустить' }}
             </button>
         </div>
     </div>

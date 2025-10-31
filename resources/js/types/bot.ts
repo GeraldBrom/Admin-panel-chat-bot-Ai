@@ -10,13 +10,15 @@ export interface Bot {
 
 export interface ChatBot {
     id: number;
-    name: string;
+    chat_id: string;
+    object_id: number;
     platform: 'whatsapp' | 'telegram' | 'max';
-    client_phone?: string;
-    object_id: string;
-    status: 'online' | 'offline' | 'processing';
-    active_sessions_count: number;
-    total_messages: number;
+    bot_config_id?: number;
+    status: 'running' | 'paused' | 'stopped' | 'completed';
+    dialog_state?: Record<string, any>;
+    metadata?: Record<string, any>;
+    started_at: string;
+    stopped_at?: string;
     created_at: string;
     updated_at: string;
 }
@@ -31,33 +33,40 @@ export interface PlatformConfig {
 
 export interface BotSession {
     id: number;
-    chat_bot_id: number;
-    session_key: string;
-    status: 'active' | 'inactive' | 'paused';
-    last_message_at: string;
-    message_count: number;
+    chat_id: string;
+    object_id: number;
+    platform: 'whatsapp' | 'telegram' | 'max';
+    bot_config_id?: number;
+    status: 'running' | 'paused' | 'stopped' | 'completed';
+    dialog_state?: Record<string, any>;
+    metadata?: Record<string, any>;
+    started_at: string;
+    stopped_at?: string;
     created_at: string;
     updated_at: string;
 }
 
 export interface Message {
     id: number;
-    session_id: number;
-    sender: 'user' | 'bot';
+    dialog_id: string;
+    role: 'user' | 'assistant' | 'system';
     content: string;
-    metadata?: Record<string, any>;
+    tokens_in?: number;
+    tokens_out?: number;
+    meta?: Record<string, any>;
     created_at: string;
 }
 
 export interface BotConfig {
     id: number;
-    chat_bot_id: number;
     name: string;
+    platform: 'whatsapp' | 'telegram' | 'max';
     prompt: string;
-    scenario: string;
-    temperature?: number;
-    max_tokens?: number;
+    scenario_description: string;
+    temperature: number;
+    max_tokens: number;
     is_active: boolean;
+    settings?: Record<string, any>;
     created_at: string;
     updated_at: string;
 }
@@ -72,21 +81,25 @@ export interface CreateChatBotData {
 }
 
 export interface CreateSessionData {
-    chat_bot_id: number;
+    chat_id: string;
+    object_id: number;
+    bot_config_id?: number;
 }
 
 export interface CreateMessageData {
-    session_id: number;
+    dialog_id: string;
     content: string;
-    sender: 'user' | 'bot';
+    role: 'user' | 'assistant' | 'system';
 }
 
 export interface CreateBotConfigData {
-    chat_bot_id: number;
     name: string;
+    platform: 'whatsapp' | 'telegram' | 'max';
     prompt: string;
-    scenario: string;
+    scenario_description: string;
     temperature?: number;
     max_tokens?: number;
+    is_active?: boolean;
+    settings?: Record<string, any>;
 }
 

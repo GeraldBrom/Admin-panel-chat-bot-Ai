@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\BotController;
+use App\Http\Controllers\BotConfigController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -27,6 +29,24 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/me', [AuthController::class, 'me']);
     });
     
-    // Здесь будут другие защищенные маршруты
+    // Bot management routes
+    Route::prefix('bots')->group(function () {
+        Route::get('/', [BotController::class, 'index']);
+        Route::post('/start', [BotController::class, 'start']);
+        Route::post('/stop-all', [BotController::class, 'stopAll']);
+        Route::get('/{chatId}', [BotController::class, 'show']);
+        Route::delete('/{chatId}', [BotController::class, 'stop']);
+    });
+
+    // Bot configs routes
+    Route::prefix('bot-configs')->group(function () {
+        Route::get('/', [BotConfigController::class, 'index']);
+        Route::post('/', [BotConfigController::class, 'store']);
+        Route::get('/platform/{platform}/active', [BotConfigController::class, 'getActive']);
+        Route::get('/{id}', [BotConfigController::class, 'show']);
+        Route::put('/{id}', [BotConfigController::class, 'update']);
+        Route::delete('/{id}', [BotConfigController::class, 'destroy']);
+        Route::post('/{id}/activate', [BotConfigController::class, 'activate']);
+    });
 });
 

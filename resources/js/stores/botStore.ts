@@ -1,26 +1,20 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import botService from '@/services/botService';
-import type { ChatBot, BotSession, Message, BotConfig } from '@/types';
+import type { ChatBot, BotConfig } from '@/types';
 
 export const useBotStore = defineStore('bot', () => {
     // State
     const chatBots = ref<ChatBot[]>([]);
     const currentChatBot = ref<ChatBot | null>(null);
-    const sessions = ref<BotSession[]>([]);
-    const currentSession = ref<BotSession | null>(null);
-    const messages = ref<Message[]>([]);
+    const messages = ref<any[]>([]);
     const configs = ref<BotConfig[]>([]);
     const loading = ref(false);
     const error = ref<string | null>(null);
 
     // Getters
     const activeChatBots = computed(() => 
-        chatBots.value.filter(bot => bot.status === 'online')
-    );
-
-    const activeSessions = computed(() => 
-        sessions.value.filter(session => session.status === 'active')
+        chatBots.value.filter(bot => bot.status === 'running')
     );
 
     const activeConfig = computed(() => 
@@ -41,11 +35,11 @@ export const useBotStore = defineStore('bot', () => {
         }
     }
 
-    async function fetchChatBot(id: number) {
+    async function fetchChatBot(chatId: string) {
         try {
             loading.value = true;
             error.value = null;
-            currentChatBot.value = await botService.getChatBot(id);
+            currentChatBot.value = await botService.getChatBot(chatId);
         } catch (err: any) {
             error.value = err.response?.data?.message || 'Ошибка загрузки чат-бота';
             throw err;
@@ -58,7 +52,7 @@ export const useBotStore = defineStore('bot', () => {
         try {
             loading.value = true;
             error.value = null;
-            const newBot = await botService.createChatBot(data);
+            const newBot = await botService.startBot(data);
             chatBots.value.push(newBot);
             return newBot;
         } catch (err: any) {
@@ -69,19 +63,19 @@ export const useBotStore = defineStore('bot', () => {
         }
     }
 
-    async function updateChatBot(id: number, data: any) {
+    async function updateChatBot(chatId: string, data: any) {
+        // Update через API пока нет, можно добавить позже
         try {
             loading.value = true;
             error.value = null;
-            const updatedBot = await botService.updateChatBot(id, data);
-            const index = chatBots.value.findIndex(bot => bot.id === id);
+            const index = chatBots.value.findIndex(bot => bot.chat_id === chatId);
             if (index !== -1) {
-                chatBots.value[index] = updatedBot;
+                chatBots.value[index] = { ...chatBots.value[index], ...data };
             }
-            if (currentChatBot.value?.id === id) {
-                currentChatBot.value = updatedBot;
+            if (currentChatBot.value?.chat_id === chatId) {
+                currentChatBot.value = { ...currentChatBot.value, ...data };
             }
-            return updatedBot;
+            return chatBots.value[index];
         } catch (err: any) {
             error.value = err.response?.data?.message || 'Ошибка обновления чат-бота';
             throw err;
@@ -90,13 +84,13 @@ export const useBotStore = defineStore('bot', () => {
         }
     }
 
-    async function deleteChatBot(id: number) {
+    async function deleteChatBot(chatId: string) {
         try {
             loading.value = true;
             error.value = null;
-            await botService.deleteChatBot(id);
-            chatBots.value = chatBots.value.filter(bot => bot.id !== id);
-            if (currentChatBot.value?.id === id) {
+            await botService.stopBot(chatId);
+            chatBots.value = chatBots.value.filter(bot => bot.chat_id !== chatId);
+            if (currentChatBot.value?.chat_id === chatId) {
                 currentChatBot.value = null;
             }
         } catch (err: any) {
@@ -107,105 +101,15 @@ export const useBotStore = defineStore('bot', () => {
         }
     }
 
-    // Session Actions
-    async function fetchBotSessions(chatBotId: number) {
+    async function stopAllBots() {
         try {
             loading.value = true;
             error.value = null;
-            sessions.value = await botService.getBotSessions(chatBotId);
+            await botService.stopAllBots();
+            chatBots.value = [];
+            currentChatBot.value = null;
         } catch (err: any) {
-            error.value = err.response?.data?.message || 'Ошибка загрузки сессий';
-            throw err;
-        } finally {
-            loading.value = false;
-        }
-    }
-
-    async function fetchSession(sessionId: number) {
-        try {
-            loading.value = true;
-            error.value = null;
-            currentSession.value = await botService.getBotSession(sessionId);
-        } catch (err: any) {
-            error.value = err.response?.data?.message || 'Ошибка загрузки сессии';
-            throw err;
-        } finally {
-            loading.value = false;
-        }
-    }
-
-    async function createSession(data: any) {
-        try {
-            loading.value = true;
-            error.value = null;
-            const newSession = await botService.createSession(data);
-            sessions.value.push(newSession);
-            return newSession;
-        } catch (err: any) {
-            error.value = err.response?.data?.message || 'Ошибка создания сессии';
-            throw err;
-        } finally {
-            loading.value = false;
-        }
-    }
-
-    async function pauseSession(id: number) {
-        try {
-            loading.value = true;
-            error.value = null;
-            const updatedSession = await botService.pauseSession(id);
-            const index = sessions.value.findIndex(session => session.id === id);
-            if (index !== -1) {
-                sessions.value[index] = updatedSession;
-            }
-        } catch (err: any) {
-            error.value = err.response?.data?.message || 'Ошибка приостановки сессии';
-            throw err;
-        } finally {
-            loading.value = false;
-        }
-    }
-
-    async function resumeSession(id: number) {
-        try {
-            loading.value = true;
-            error.value = null;
-            const updatedSession = await botService.resumeSession(id);
-            const index = sessions.value.findIndex(session => session.id === id);
-            if (index !== -1) {
-                sessions.value[index] = updatedSession;
-            }
-        } catch (err: any) {
-            error.value = err.response?.data?.message || 'Ошибка возобновления сессии';
-            throw err;
-        } finally {
-            loading.value = false;
-        }
-    }
-
-    // Message Actions
-    async function fetchSessionMessages(sessionId: number) {
-        try {
-            loading.value = true;
-            error.value = null;
-            messages.value = await botService.getSessionMessages(sessionId);
-        } catch (err: any) {
-            error.value = err.response?.data?.message || 'Ошибка загрузки сообщений';
-            throw err;
-        } finally {
-            loading.value = false;
-        }
-    }
-
-    async function sendMessage(sessionId: number, content: string) {
-        try {
-            loading.value = true;
-            error.value = null;
-            const newMessage = await botService.sendUserMessage(sessionId, content);
-            messages.value.push(newMessage);
-            return newMessage;
-        } catch (err: any) {
-            error.value = err.response?.data?.message || 'Ошибка отправки сообщения';
+            error.value = err.response?.data?.message || 'Ошибка остановки ботов';
             throw err;
         } finally {
             loading.value = false;
@@ -213,11 +117,11 @@ export const useBotStore = defineStore('bot', () => {
     }
 
     // Config Actions
-    async function fetchBotConfigs(chatBotId: number) {
+    async function fetchBotConfigs(platform?: 'whatsapp' | 'telegram' | 'max') {
         try {
             loading.value = true;
             error.value = null;
-            configs.value = await botService.getBotConfigs(chatBotId);
+            configs.value = await botService.getBotConfigs(platform);
         } catch (err: any) {
             error.value = err.response?.data?.message || 'Ошибка загрузки конфигураций';
             throw err;
@@ -298,17 +202,13 @@ export const useBotStore = defineStore('bot', () => {
 
     function clearCurrentData() {
         currentChatBot.value = null;
-        currentSession.value = null;
         messages.value = [];
-        configs.value = [];
     }
 
     return {
         // State
         chatBots,
         currentChatBot,
-        sessions,
-        currentSession,
         messages,
         configs,
         loading,
@@ -316,7 +216,6 @@ export const useBotStore = defineStore('bot', () => {
         
         // Getters
         activeChatBots,
-        activeSessions,
         activeConfig,
         
         // Actions
@@ -325,13 +224,7 @@ export const useBotStore = defineStore('bot', () => {
         createChatBot,
         updateChatBot,
         deleteChatBot,
-        fetchBotSessions,
-        fetchSession,
-        createSession,
-        pauseSession,
-        resumeSession,
-        fetchSessionMessages,
-        sendMessage,
+        stopAllBots,
         fetchBotConfigs,
         createBotConfig,
         updateBotConfig,
@@ -341,4 +234,3 @@ export const useBotStore = defineStore('bot', () => {
         clearCurrentData,
     };
 });
-

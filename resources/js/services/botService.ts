@@ -6,191 +6,110 @@ import type {
     BotConfig,
     CreateChatBotData,
     CreateSessionData,
-    CreateMessageData,
-    CreateBotConfigData,
 } from '@/types';
 
 class BotService {
-    // ChatBot methods
+    // Bot Sessions (ChatBots) - основная работа с ботами
     /**
-     * Получить все чат-боты
+     * Получить все сессии ботов
      */
     async getAllChatBots(): Promise<ChatBot[]> {
-        const response = await api.get<any>('/bots');
-        return response.data.bots || response.data;
+        const response = await api.get('/bots');
+        return response.data.data || [];
     }
 
     /**
-     * Получить конкретного чат-бота
+     * Получить конкретного бота по chatId
      */
-    async getChatBot(id: number): Promise<ChatBot> {
-        const response = await api.get<any>(`/bots/${id}`);
-        return response.data.bot || response.data;
+    async getChatBot(chatId: string): Promise<ChatBot> {
+        const response = await api.get(`/bots/${chatId}`);
+        return response.data.data;
     }
 
     /**
-     * Создать чат-бота
+     * Создать/запустить бота
      */
-    async createChatBot(data: CreateChatBotData): Promise<ChatBot> {
-        const response = await api.post<any>('/bots', data);
-        return response.data.bot || response.data;
+    async startBot(data: CreateSessionData): Promise<ChatBot> {
+        const response = await api.post('/bots/start', data);
+        return response.data.data;
     }
 
     /**
-     * Обновить чат-бота
+     * Остановить конкретного бота
      */
-    async updateChatBot(id: number, data: Partial<CreateChatBotData>): Promise<ChatBot> {
-        const response = await api.put<any>(`/bots/${id}`, data);
-        return response.data.bot || response.data;
+    async stopBot(chatId: string): Promise<ChatBot> {
+        const response = await api.delete(`/bots/${chatId}`);
+        return response.data.data;
     }
 
     /**
-     * Удалить чат-бота
+     * Остановить всех ботов
      */
-    async deleteChatBot(id: number): Promise<void> {
-        await api.delete(`/bots/${id}`);
+    async stopAllBots(): Promise<{ message: string; count: number }> {
+        const response = await api.post('/bots/stop-all');
+        return response.data;
     }
 
-    // BotSession methods
+    // Bot Config methods
     /**
-     * Получить все сессии чат-бота
+     * Получить все конфигурации (с фильтром по платформе)
      */
-    async getBotSessions(chatBotId: number): Promise<BotSession[]> {
-        const response = await api.get<any>(`/bots/${chatBotId}/sessions`);
-        return response.data.sessions || response.data;
-    }
-
-    /**
-     * Получить конкретную сессию
-     */
-    async getBotSession(sessionId: number): Promise<BotSession> {
-        const response = await api.get<any>(`/sessions/${sessionId}`);
-        return response.data.session || response.data;
-    }
-
-    /**
-     * Создать сессию
-     */
-    async createSession(data: CreateSessionData): Promise<BotSession> {
-        const response = await api.post<any>('/sessions', data);
-        return response.data.session || response.data;
-    }
-
-    /**
-     * Обновить сессию
-     */
-    async updateSession(id: number, data: Partial<BotSession>): Promise<BotSession> {
-        const response = await api.put<any>(`/sessions/${id}`, data);
-        return response.data.session || response.data;
-    }
-
-    /**
-     * Удалить сессию
-     */
-    async deleteSession(id: number): Promise<void> {
-        await api.delete(`/sessions/${id}`);
-    }
-
-    /**
-     * Приостановить сессию
-     */
-    async pauseSession(id: number): Promise<BotSession> {
-        const response = await api.post<any>(`/sessions/${id}/pause`);
-        return response.data.session || response.data;
-    }
-
-    /**
-     * Возобновить сессию
-     */
-    async resumeSession(id: number): Promise<BotSession> {
-        const response = await api.post<any>(`/sessions/${id}/resume`);
-        return response.data.session || response.data;
-    }
-
-    // Message methods
-    /**
-     * Получить сообщения сессии
-     */
-    async getSessionMessages(sessionId: number): Promise<Message[]> {
-        const response = await api.get<any>(`/sessions/${sessionId}/messages`);
-        return response.data.messages || response.data;
-    }
-
-    /**
-     * Создать сообщение
-     */
-    async createMessage(data: CreateMessageData): Promise<Message> {
-        const response = await api.post<any>('/messages', data);
-        return response.data.message || response.data;
-    }
-
-    /**
-     * Отправить сообщение (user message)
-     */
-    async sendUserMessage(sessionId: number, content: string): Promise<Message> {
-        return this.createMessage({
-            session_id: sessionId,
-            content,
-            sender: 'user',
-        });
-    }
-
-    // BotConfig methods
-    /**
-     * Получить все конфигурации бота
-     */
-    async getBotConfigs(chatBotId: number): Promise<BotConfig[]> {
-        const response = await api.get<any>(`/bots/${chatBotId}/configs`);
-        return response.data.configs || response.data;
+    async getBotConfigs(platform?: 'whatsapp' | 'telegram' | 'max'): Promise<BotConfig[]> {
+        const params = platform ? { platform } : {};
+        const response = await api.get('/bot-configs', { params });
+        return response.data.data || [];
     }
 
     /**
      * Получить конкретную конфигурацию
      */
-    async getBotConfig(configId: number): Promise<BotConfig> {
-        const response = await api.get<any>(`/configs/${configId}`);
-        return response.data.config || response.data;
+    async getBotConfig(id: number): Promise<BotConfig> {
+        const response = await api.get(`/bot-configs/${id}`);
+        return response.data.data;
+    }
+
+    /**
+     * Получить активную конфигурацию для платформы
+     */
+    async getActiveConfig(platform: 'whatsapp' | 'telegram' | 'max'): Promise<BotConfig | null> {
+        try {
+            const response = await api.get(`/bot-configs/platform/${platform}/active`);
+            return response.data.data;
+        } catch {
+            return null;
+        }
     }
 
     /**
      * Создать конфигурацию
      */
-    async createBotConfig(data: CreateBotConfigData): Promise<BotConfig> {
-        const response = await api.post<any>('/configs', data);
-        return response.data.config || response.data;
+    async createBotConfig(data: Partial<BotConfig>): Promise<BotConfig> {
+        const response = await api.post('/bot-configs', data);
+        return response.data.data;
     }
 
     /**
      * Обновить конфигурацию
      */
-    async updateBotConfig(id: number, data: Partial<CreateBotConfigData>): Promise<BotConfig> {
-        const response = await api.put<any>(`/configs/${id}`, data);
-        return response.data.config || response.data;
+    async updateBotConfig(id: number, data: Partial<BotConfig>): Promise<BotConfig> {
+        const response = await api.put(`/bot-configs/${id}`, data);
+        return response.data.data;
     }
 
     /**
      * Удалить конфигурацию
      */
     async deleteBotConfig(id: number): Promise<void> {
-        await api.delete(`/configs/${id}`);
+        await api.delete(`/bot-configs/${id}`);
     }
 
     /**
      * Активировать конфигурацию
      */
     async activateConfig(id: number): Promise<BotConfig> {
-        const response = await api.post<any>(`/configs/${id}/activate`);
-        return response.data.config || response.data;
-    }
-
-    /**
-     * Деактивировать конфигурацию
-     */
-    async deactivateConfig(id: number): Promise<BotConfig> {
-        const response = await api.post<any>(`/configs/${id}/deactivate`);
-        return response.data.config || response.data;
+        const response = await api.post(`/bot-configs/${id}/activate`);
+        return response.data.data;
     }
 }
 
 export default new BotService();
-
