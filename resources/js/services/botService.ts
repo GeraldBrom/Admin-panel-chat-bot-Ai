@@ -54,7 +54,7 @@ class BotService {
     /**
      * Получить все конфигурации (с фильтром по платформе)
      */
-    async getBotConfigs(platform?: 'whatsapp' | 'telegram' | 'max'): Promise<BotConfig[]> {
+    async getBotConfigs(platform?: 'whatsapp'): Promise<BotConfig[]> {
         const params = platform ? { platform } : {};
         const response = await api.get('/bot-configs', { params });
         return response.data.data || [];
@@ -68,17 +68,7 @@ class BotService {
         return response.data.data;
     }
 
-    /**
-     * Получить активную конфигурацию для платформы
-     */
-    async getActiveConfig(platform: 'whatsapp' | 'telegram' | 'max'): Promise<BotConfig | null> {
-        try {
-            const response = await api.get(`/bot-configs/platform/${platform}/active`);
-            return response.data.data;
-        } catch {
-            return null;
-        }
-    }
+    // Получение активной конфигурации больше не требуется
 
     /**
      * Создать конфигурацию
@@ -103,13 +93,7 @@ class BotService {
         await api.delete(`/bot-configs/${id}`);
     }
 
-    /**
-     * Активировать конфигурацию
-     */
-    async activateConfig(id: number): Promise<BotConfig> {
-        const response = await api.post(`/bot-configs/${id}/activate`);
-        return response.data.data;
-    }
+    // Активация конфигурации больше не используется
 }
 
 export default new BotService();

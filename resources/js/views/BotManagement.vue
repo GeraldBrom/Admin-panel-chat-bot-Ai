@@ -7,7 +7,7 @@ import type { BotConfig } from '@/types';
 const botStore = useBotStore();
 
 const selectedConfig = ref<BotConfig | null>(null);
-const selectedPlatform = ref<'whatsapp' | 'telegram' | 'max'>('max');
+const selectedPlatform = ref<'whatsapp'>('whatsapp');
 
 // Load configs when platform changes
 watch(selectedPlatform, () => {
@@ -30,14 +30,10 @@ const loading = computed(() => botStore.loading);
 
 const platformLabels = {
     whatsapp: 'WhatsApp',
-    telegram: 'Telegram',
-    max: 'MAX',
 };
 
 const platforms = [
-    { value: 'max', label: 'MAX', icon: '🤖' },
     { value: 'whatsapp', label: 'WhatsApp', icon: '📱' },
-    { value: 'telegram', label: 'Telegram', icon: '✈️' },
 ];
 
 // Localization for prompts and messages
@@ -175,12 +171,11 @@ const cancelEditing = () => {
               v-for="config in botStore.configs"
               :key="config.id"
               class="config-card"
-              :class="{ 'config-card--active': config.is_active, 'config-card--editing': selectedConfig?.id === config.id }"
+              :class="{ 'config-card--editing': selectedConfig?.id === config.id }"
             >
               <div class="config-card__header">
                 <div class="config-card__title">
                   <h3>{{ config.name }}</h3>
-                  <span v-if="config.is_active" class="badge badge--active">Активная</span>
                 </div>
                 <div class="config-card__actions">
                   <button

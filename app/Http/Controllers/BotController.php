@@ -87,23 +87,21 @@ class BotController extends Controller
      */
     public function stop(string $chatId): JsonResponse
     {
-        try {
-            $session = BotSession::where('chat_id', $chatId)
-                ->where('status', 'running')
-                ->firstOrFail();
+        $session = BotSession::where('chat_id', $chatId)->first();
 
+        if ($session && $session->status === 'running') {
             $session->stop();
-
             return response()->json([
                 'message' => 'Bot stopped successfully',
                 'data' => new BotSessionResource($session->fresh()),
             ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'message' => 'Failed to stop bot',
-                'error' => $e->getMessage(),
-            ], 404);
         }
+
+        // Идемпотентное поведение: если бота нет или уже остановлен — возвращаем 200
+        return response()->json([
+            'message' => 'Bot already stopped or not found',
+            'data' => $session ? new BotSessionResource($session) : null,
+        ]);
     }
 
     /**

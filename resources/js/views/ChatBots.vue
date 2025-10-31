@@ -27,9 +27,19 @@ onMounted(async () => {
 
 // Select bot and load its messages
 const selectBot = async (bot: ChatBot) => {
-    selectedBot.value = bot;
-    // Загружаем последние сообщения для выбранного бота
-    // await botStore.fetchSessionMessages(bot.id);
+    try {
+        selectedBot.value = bot;
+        // Если у бота уже есть сообщения, используем их
+        if (bot.messages) {
+            botStore.messages = bot.messages;
+        } else {
+            // Загружаем бота с сообщениями с сервера
+            const fullBot = await botStore.fetchChatBot(bot.chat_id);
+            selectedBot.value = fullBot;
+        }
+    } catch (err) {
+        console.error('Failed to load bot messages:', err);
+    }
 };
 
 // Handle delete bot
@@ -42,6 +52,21 @@ const deleteBot = async (bot: ChatBot) => {
     }
 };
 
+// Format chat ID for WhatsApp
+const formatChatId = (phone: string): string => {
+    if (!phone) return '';
+    
+    // Remove all non-digit characters
+    const digits = phone.replace(/\D/g, '');
+    
+    // Add @c.us suffix if not present
+    if (!phone.includes('@')) {
+        return `${digits}@c.us`;
+    }
+    
+    return phone;
+};
+
 // Create bot
 const createBot = async () => {
     if (!newBotForm.value.chat_id || !newBotForm.value.object_id) {
@@ -50,7 +75,13 @@ const createBot = async () => {
     }
     
     try {
-        await botStore.createChatBot(newBotForm.value);
+        // Format chat_id for WhatsApp
+        const formattedData = {
+            ...newBotForm.value,
+            chat_id: formatChatId(newBotForm.value.chat_id),
+        };
+        
+        await botStore.createChatBot(formattedData);
         showCreateBotModal.value = false;
         newBotForm.value = { chat_id: '', object_id: 0, bot_config_id: undefined };
     } catch (err) {
@@ -178,13 +209,14 @@ const sendMessage = async (content: string) => {
           </div>
           <div class="modal__body">
             <div class="form-group">
-              <label class="form-label">WhatsApp Chat ID *</label>
+              <label class="form-label">Номер WhatsApp *</label>
               <input
                 v-model="newBotForm.chat_id"
                 type="text"
                 class="form-input"
-                placeholder="79001234567@c.us"
+                placeholder="79001234567"
               />
+              <small class="form-help">Введите номер без @c.us — он добавится автоматически</small>
             </div>
             <div class="form-group">
               <label class="form-label">ID объекта *</label>
@@ -207,3 +239,20 @@ const sendMessage = async (content: string) => {
     </div>
   </MainLayout>
 </template>
+
+<style scoped lang="scss">
+.chat-bots-page {
+  overflow-x: hidden;
+}
+
+.bots-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+  overflow-x: hidden;
+}
+
+.chat-bot-card {
+  min-width: 0;
+}
+</style>

@@ -32,13 +32,8 @@ class DialogService
     {
         Log::info("Initializing dialog for chatId: {$chatId}, objectId: {$objectId}, configId: {$botConfigId}");
 
-        // Get bot config (use provided or find active for platform)
-        if (!$botConfigId) {
-            $config = BotConfig::getActiveForPlatform('whatsapp');
-            $botConfigId = $config?->id;
-        } else {
-            $config = BotConfig::find($botConfigId);
-        }
+        // Конфигурация выбирается явно при старте; активной по умолчанию больше нет
+        $config = $botConfigId ? BotConfig::find($botConfigId) : null;
 
         // Get or create bot session
         $session = BotSession::firstOrCreate(

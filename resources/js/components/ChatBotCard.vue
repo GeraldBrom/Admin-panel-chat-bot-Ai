@@ -13,7 +13,6 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
     (e: 'select', bot: ChatBot): void;
-    (e: 'edit', bot: ChatBot): void;
     (e: 'delete', bot: ChatBot): void;
     (e: 'toggle', bot: ChatBot): void;
 }>();
@@ -65,39 +64,25 @@ const platformLabel = computed(() => {
         :class="{ 'chat-bot-card--selected': selected }"
         @click="emit('select', bot)"
     >
-        <div class="chat-bot-card__header">
-            <div class="chat-bot-card__title">
-                <h3>{{ bot.chat_id }}</h3>
-                <span class="status" :class="statusClass">{{ statusLabel }}</span>
-            </div>
-            <div class="chat-bot-card__actions">
-                <button 
-                    class="btn btn--ghost btn--sm" 
-                    @click.stop="emit('edit', bot)"
-                >
-                    ✏️
-                </button>
-                <button 
-                    class="btn btn--ghost btn--sm btn--danger" 
-                    @click.stop="emit('delete', bot)"
-                >
-                    🗑️
-                </button>
-            </div>
-        </div>
+        
         
         <div class="chat-bot-card__body">
             <div class="chat-bot-card__info">
                 <div class="info-item">
+                    <span class="info-label">Телефон:</span>
+                    <span class="info-value">{{ bot.chat_id }}</span>
+                </div>
+                <div class="info-item">
                     <span class="info-label">Платформа:</span>
-                    <span class="info-value">
-                        <span class="platform-icon">{{ platformIcon }}</span>
-                        {{ platformLabel }}
-                    </span>
+                    <span class="info-value"><span class="platform-icon">📱</span>WhatsApp</span>
                 </div>
                 <div class="info-item">
                     <span class="info-label">ID объекта:</span>
                     <span class="info-value">{{ bot.object_id }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Статус:</span>
+                    <span class="info-value"><span class="status" :class="statusClass">{{ statusLabel }}</span></span>
                 </div>
             </div>
         </div>
@@ -133,29 +118,7 @@ const platformLabel = computed(() => {
         border: 2px solid $primary-color;
     }
     
-    &__header {
-        @include flex-between;
-        margin-bottom: $spacing-md;
-        padding-bottom: $spacing-md;
-        border-bottom: 1px solid $border-color;
-    }
-    
-    &__title {
-        display: flex;
-        align-items: center;
-        gap: $spacing-md;
-        
-        h3 {
-            margin: 0;
-            font-size: $font-size-lg;
-            color: $text-primary;
-        }
-    }
-    
-    &__actions {
-        display: flex;
-        gap: $spacing-xs;
-    }
+    // header удалён по требованию
     
     &__body {
         margin-bottom: $spacing-md;

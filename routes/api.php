@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BotController;
 use App\Http\Controllers\BotConfigController;
+use App\Http\Controllers\GreenApiWebhookController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -21,6 +22,9 @@ Route::prefix('auth')->group(function () {
     Route::post('/login', [AuthController::class, 'login']);
 });
 
+// Публичный вебхук от Green API (без аутентификации)
+Route::post('/greenapi/webhook', [GreenApiWebhookController::class, 'handle']);
+
 // Защищенные маршруты (требуют авторизации)
 Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('auth')->group(function () {
@@ -38,15 +42,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/{chatId}', [BotController::class, 'stop']);
     });
 
-    // Bot configs routes
+    // Bot configs routes (без статуса "активная" — конфигурации выбираются явно)
     Route::prefix('bot-configs')->group(function () {
         Route::get('/', [BotConfigController::class, 'index']);
         Route::post('/', [BotConfigController::class, 'store']);
-        Route::get('/platform/{platform}/active', [BotConfigController::class, 'getActive']);
         Route::get('/{id}', [BotConfigController::class, 'show']);
         Route::put('/{id}', [BotConfigController::class, 'update']);
         Route::delete('/{id}', [BotConfigController::class, 'destroy']);
-        Route::post('/{id}/activate', [BotConfigController::class, 'activate']);
     });
 });
 

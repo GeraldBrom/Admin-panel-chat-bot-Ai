@@ -1,13 +1,13 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import botService from '@/services/botService';
-import type { ChatBot, BotConfig } from '@/types';
+import type { ChatBot, BotConfig, Message } from '@/types';
 
 export const useBotStore = defineStore('bot', () => {
     // State
     const chatBots = ref<ChatBot[]>([]);
     const currentChatBot = ref<ChatBot | null>(null);
-    const messages = ref<any[]>([]);
+    const messages = ref<Message[]>([]);
     const configs = ref<BotConfig[]>([]);
     const loading = ref(false);
     const error = ref<string | null>(null);
@@ -17,9 +17,7 @@ export const useBotStore = defineStore('bot', () => {
         chatBots.value.filter(bot => bot.status === 'running')
     );
 
-    const activeConfig = computed(() => 
-        configs.value.find(config => config.is_active)
-    );
+    // Активная конфигурация больше не используется — конфиг выбирается явно
 
     // ChatBot Actions
     async function fetchAllChatBots() {
@@ -39,7 +37,15 @@ export const useBotStore = defineStore('bot', () => {
         try {
             loading.value = true;
             error.value = null;
-            currentChatBot.value = await botService.getChatBot(chatId);
+            const bot = await botService.getChatBot(chatId);
+            currentChatBot.value = bot;
+            
+            // Update messages if available
+            if (bot.messages) {
+                messages.value = bot.messages;
+            }
+            
+            return bot;
         } catch (err: any) {
             error.value = err.response?.data?.message || 'Ошибка загрузки чат-бота';
             throw err;
@@ -117,7 +123,7 @@ export const useBotStore = defineStore('bot', () => {
     }
 
     // Config Actions
-    async function fetchBotConfigs(platform?: 'whatsapp' | 'telegram' | 'max') {
+    async function fetchBotConfigs(platform?: 'whatsapp') {
         try {
             loading.value = true;
             error.value = null;
@@ -177,24 +183,7 @@ export const useBotStore = defineStore('bot', () => {
         }
     }
 
-    async function activateConfig(id: number) {
-        try {
-            loading.value = true;
-            error.value = null;
-            const updatedConfig = await botService.activateConfig(id);
-            // Деактивируем другие конфигурации
-            configs.value = configs.value.map(config => ({
-                ...config,
-                is_active: config.id === id,
-            }));
-            return updatedConfig;
-        } catch (err: any) {
-            error.value = err.response?.data?.message || 'Ошибка активации конфигурации';
-            throw err;
-        } finally {
-            loading.value = false;
-        }
-    }
+    // Активация конфигурации не требуется
 
     function clearError() {
         error.value = null;
@@ -216,7 +205,7 @@ export const useBotStore = defineStore('bot', () => {
         
         // Getters
         activeChatBots,
-        activeConfig,
+        
         
         // Actions
         fetchAllChatBots,
@@ -229,7 +218,7 @@ export const useBotStore = defineStore('bot', () => {
         createBotConfig,
         updateBotConfig,
         deleteBotConfig,
-        activateConfig,
+        
         clearError,
         clearCurrentData,
     };

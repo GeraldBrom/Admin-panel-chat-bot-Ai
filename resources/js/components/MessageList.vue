@@ -24,6 +24,13 @@ const formatTime = (dateString: string) => {
     });
 };
 
+const getMessageSender = (role: string): string => {
+    // Map role to sender class for styling
+    if (role === 'user') return 'user';
+    if (role === 'assistant') return 'bot';
+    return 'bot'; // Default to bot for system and other roles
+};
+
 watch(() => props.messages, () => {
     scrollToBottom();
 }, { deep: true });
@@ -44,7 +51,7 @@ onMounted(() => {
                 v-for="message in messages"
                 :key="message.id"
                 class="message"
-                :class="`message--${message.sender}`"
+                :class="`message--${getMessageSender(message.role)}`"
             >
                 <div class="message__content">
                     {{ message.content }}

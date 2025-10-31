@@ -29,23 +29,7 @@ class BotConfigController extends Controller
         ]);
     }
 
-    /**
-     * Get active config for platform
-     */
-    public function getActive(Request $request, string $platform): JsonResponse
-    {
-        $config = BotConfig::getActiveForPlatform($platform);
-
-        if (!$config) {
-            return response()->json([
-                'message' => 'No active config found for this platform',
-            ], 404);
-        }
-
-        return response()->json([
-            'data' => new BotConfigResource($config),
-        ]);
-    }
+    // Метод получения "активной" конфигурации удалён — конфигурации выбираются явно при создании бота
 
     /**
      * Get specific bot config
@@ -66,12 +50,12 @@ class BotConfigController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
-            'platform' => 'required|string|in:whatsapp,telegram,max',
+            'platform' => 'required|string|in:whatsapp',
+            'platform' => 'required|string|in:whatsapp',
             'prompt' => 'required|string',
             'scenario_description' => 'nullable|string',
             'temperature' => 'nullable|numeric|min:0|max:2',
             'max_tokens' => 'nullable|integer|min:1|max:4000',
-            'is_active' => 'boolean',
             'settings' => 'nullable|array',
         ]);
 
@@ -83,13 +67,6 @@ class BotConfigController extends Controller
         }
 
         try {
-            // Если новый конфиг активный, деактивируем остальные для этой платформы
-            if ($request->boolean('is_active', false)) {
-                BotConfig::where('platform', $request->platform)
-                    ->where('is_active', true)
-                    ->update(['is_active' => false]);
-            }
-
             $config = BotConfig::create($request->all());
 
             return response()->json([
@@ -121,7 +98,6 @@ class BotConfigController extends Controller
             'scenario_description' => 'nullable|string',
             'temperature' => 'nullable|numeric|min:0|max:2',
             'max_tokens' => 'nullable|integer|min:1|max:4000',
-            'is_active' => 'boolean',
             'settings' => 'nullable|array',
         ]);
 
@@ -133,21 +109,12 @@ class BotConfigController extends Controller
         }
 
         try {
-            // Если активируем конфиг, деактивируем остальные для этой платформы
-            if ($request->has('is_active') && $request->boolean('is_active')) {
-                BotConfig::where('platform', $config->platform)
-                    ->where('id', '!=', $id)
-                    ->where('is_active', true)
-                    ->update(['is_active' => false]);
-            }
-
             $config->update($request->only([
                 'name',
                 'prompt',
                 'scenario_description',
                 'temperature',
                 'max_tokens',
-                'is_active',
                 'settings',
             ]));
 
@@ -193,32 +160,6 @@ class BotConfigController extends Controller
         }
     }
 
-    /**
-     * Activate config (deactivate others for the same platform)
-     */
-    public function activate(int $id): JsonResponse
-    {
-        try {
-            $config = BotConfig::findOrFail($id);
-
-            // Деактивируем остальные для этой платформы
-            BotConfig::where('platform', $config->platform)
-                ->where('id', '!=', $id)
-                ->update(['is_active' => false]);
-
-            // Активируем текущий
-            $config->update(['is_active' => true]);
-
-            return response()->json([
-                'message' => 'Bot config activated successfully',
-                'data' => new BotConfigResource($config->fresh()),
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'message' => 'Failed to activate bot config',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
-    }
+    // Метод activate удалён — статуса у конфигураций больше нет
 }
 

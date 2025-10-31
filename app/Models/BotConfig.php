@@ -16,14 +16,12 @@ class BotConfig extends Model
         'scenario_description',
         'temperature',
         'max_tokens',
-        'is_active',
         'settings',
     ];
 
     protected $casts = [
         'temperature' => 'decimal:2',
         'max_tokens' => 'integer',
-        'is_active' => 'boolean',
         'settings' => 'array',
     ];
 
@@ -35,22 +33,6 @@ class BotConfig extends Model
         return $query->where('platform', $platform);
     }
 
-    /**
-     * Scope: Get active config
-     */
-    public function scopeActive($query)
-    {
-        return $query->where('is_active', true);
-    }
-
-    /**
-     * Get active config for platform
-     */
-    public static function getActiveForPlatform(string $platform): ?self
-    {
-        return self::where('platform', $platform)
-            ->where('is_active', true)
-            ->first();
-    }
+    // Поле активности удалено из бизнес-логики: конфигурации выбираются явно при создании бота
 }
 

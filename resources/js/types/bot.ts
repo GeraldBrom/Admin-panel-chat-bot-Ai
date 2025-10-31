@@ -12,7 +12,7 @@ export interface ChatBot {
     id: number;
     chat_id: string;
     object_id: number;
-    platform: 'whatsapp' | 'telegram' | 'max';
+    platform: 'whatsapp';
     bot_config_id?: number;
     status: 'running' | 'paused' | 'stopped' | 'completed';
     dialog_state?: Record<string, any>;
@@ -21,10 +21,12 @@ export interface ChatBot {
     stopped_at?: string;
     created_at: string;
     updated_at: string;
+    dialog_id?: string;
+    messages?: Message[];
 }
 
 export interface PlatformConfig {
-    platform: 'whatsapp' | 'telegram' | 'max';
+    platform: 'whatsapp';
     api_key?: string;
     bot_token?: string;
     webhook_url?: string;
@@ -35,7 +37,7 @@ export interface BotSession {
     id: number;
     chat_id: string;
     object_id: number;
-    platform: 'whatsapp' | 'telegram' | 'max';
+    platform: 'whatsapp';
     bot_config_id?: number;
     status: 'running' | 'paused' | 'stopped' | 'completed';
     dialog_state?: Record<string, any>;
@@ -60,12 +62,12 @@ export interface Message {
 export interface BotConfig {
     id: number;
     name: string;
-    platform: 'whatsapp' | 'telegram' | 'max';
+    platform: 'whatsapp';
     prompt: string;
     scenario_description: string;
     temperature: number;
     max_tokens: number;
-    is_active: boolean;
+    
     settings?: Record<string, any>;
     created_at: string;
     updated_at: string;
@@ -74,7 +76,7 @@ export interface BotConfig {
 // Create/Update DTOs
 export interface CreateChatBotData {
     name: string;
-    platform: 'whatsapp' | 'telegram' | 'max';
+    platform: 'whatsapp';
     client_phone?: string;
     object_id: string;
     platform_config?: Partial<PlatformConfig>;
@@ -94,12 +96,12 @@ export interface CreateMessageData {
 
 export interface CreateBotConfigData {
     name: string;
-    platform: 'whatsapp' | 'telegram' | 'max';
+    platform: 'whatsapp';
     prompt: string;
     scenario_description: string;
     temperature?: number;
     max_tokens?: number;
-    is_active?: boolean;
+    
     settings?: Record<string, any>;
 }
 
