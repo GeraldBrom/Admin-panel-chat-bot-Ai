@@ -1,0 +1,73 @@
+// Forms
+.form-group {
+    margin-bottom: $spacing-lg;
+}
+
+.form-label {
+    display: block;
+    margin-bottom: $spacing-sm;
+    font-weight: 500;
+    color: $text-primary;
+    font-size: $font-size-sm;
+}
+
+.form-input {
+    @include input;
+    
+    &.error {
+        border-color: $danger-color;
+    }
+    
+    &:disabled {
+        background: $bg-gray-100;
+        cursor: not-allowed;
+    }
+}
+
+.form-textarea {
+    @include input;
+    min-height: 120px;
+    resize: vertical;
+}
+
+.form-error {
+    display: block;
+    margin-top: $spacing-xs;
+    color: $danger-color;
+    font-size: $font-size-sm;
+}
+
+.form-checkbox {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    
+    input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+    }
+    
+    label {
+        cursor: pointer;
+        user-select: none;
+    }
+}
+
+// Input with icon
+.input-group {
+    position: relative;
+    
+    .input-icon {
+        position: absolute;
+        left: $spacing-md;
+        top: 50%;
+        transform: translateY(-50%);
+        color: $text-secondary;
+    }
+    
+    input {
+        padding-left: calc(#{$spacing-md} + 24px);
+    }
+}
+

@@ -1,0 +1,89 @@
+// Buttons
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: $spacing-sm;
+    padding: $spacing-md $spacing-xl;
+    font-size: $font-size-base;
+    font-weight: 500;
+    border: none;
+    border-radius: $border-radius-sm;
+    cursor: pointer;
+    transition: all $transition-base;
+    text-decoration: none;
+    
+    &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+    
+    // Primary button
+    &--primary {
+        @include button-variant($primary-color);
+    }
+    
+    // Secondary button
+    &--secondary {
+        @include button-variant($secondary-color);
+    }
+    
+    // Success button
+    &--success {
+        @include button-variant($success-color);
+    }
+    
+    // Danger button
+    &--danger {
+        @include button-variant($danger-color);
+    }
+    
+    // Outline button
+    &--outline {
+        background: transparent;
+        color: $primary-color;
+        border: 2px solid $primary-color;
+        
+        &:hover {
+            background: $primary-color;
+            color: $text-white;
+        }
+    }
+    
+    // Ghost button
+    &--ghost {
+        background: transparent;
+        color: $text-primary;
+        
+        &:hover {
+            background: $bg-gray-100;
+        }
+    }
+    
+    // Full width
+    &--block {
+        width: 100%;
+    }
+    
+    // Sizes
+    &--sm {
+        padding: $spacing-sm $spacing-md;
+        font-size: $font-size-sm;
+    }
+    
+    &--lg {
+        padding: $spacing-lg $spacing-2xl;
+        font-size: $font-size-lg;
+    }
+}
+
+// Button group
+.btn-group {
+    display: flex;
+    gap: $spacing-md;
+    
+    &--center {
+        justify-content: center;
+    }
+}
+

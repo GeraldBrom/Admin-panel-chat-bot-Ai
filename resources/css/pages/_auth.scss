@@ -1,0 +1,111 @@
+// Auth pages
+.auth-page {
+    min-height: 100vh;
+    @include flex-center;
+    background: linear-gradient(135deg, $primary-color 0%, $secondary-color 100%);
+    padding: $spacing-xl;
+}
+
+.auth-card {
+    @include card;
+    width: 100%;
+    max-width: 450px;
+    padding: $spacing-2xl;
+    
+    @include mobile {
+        padding: $spacing-xl;
+    }
+}
+
+.auth-header {
+    text-align: center;
+    margin-bottom: $spacing-2xl;
+    
+    h1 {
+        font-size: 1.75rem;
+        color: $text-primary;
+        margin-bottom: $spacing-sm;
+    }
+    
+    p {
+        color: $text-secondary;
+        font-size: $font-size-base;
+    }
+}
+
+.auth-logo {
+    width: 60px;
+    height: 60px;
+    margin: 0 auto $spacing-lg;
+    @include flex-center;
+    background: linear-gradient(135deg, $primary-color 0%, $secondary-color 100%);
+    border-radius: $border-radius-lg;
+    color: $text-white;
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.auth-form {
+    .form-group {
+        margin-bottom: $spacing-lg;
+    }
+    
+    .form-actions {
+        margin-top: $spacing-xl;
+    }
+}
+
+.auth-divider {
+    display: flex;
+    align-items: center;
+    margin: $spacing-xl 0;
+    color: $text-secondary;
+    font-size: $font-size-sm;
+    
+    &::before,
+    &::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: $border-color;
+    }
+    
+    &::before {
+        margin-right: $spacing-md;
+    }
+    
+    &::after {
+        margin-left: $spacing-md;
+    }
+}
+
+.auth-footer {
+    text-align: center;
+    margin-top: $spacing-xl;
+    color: $text-secondary;
+    font-size: $font-size-sm;
+    
+    a {
+        color: $primary-color;
+        font-weight: 500;
+        
+        &:hover {
+            color: $primary-dark;
+        }
+    }
+}
+
+// Loading state
+.loading {
+    position: relative;
+    
+    &::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: rgba(255, 255, 255, 0.8);
+        @include flex-center;
+        border-radius: inherit;
+    }
+}
+

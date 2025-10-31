@@ -1,0 +1,79 @@
+// Main layout
+.main-layout {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.main-header {
+    background: $bg-white;
+    box-shadow: $box-shadow;
+    padding: $spacing-lg 0;
+    position: sticky;
+    top: 0;
+    z-index: $z-sticky;
+    
+    .header-content {
+        @include flex-between;
+    }
+    
+    .header-logo {
+        font-size: $font-size-xl;
+        font-weight: 700;
+        color: $primary-color;
+    }
+    
+    .header-nav {
+        display: flex;
+        gap: $spacing-xl;
+        
+        a {
+            color: $text-primary;
+            font-weight: 500;
+            
+            &:hover,
+            &.active {
+                color: $primary-color;
+            }
+        }
+    }
+    
+    .header-user {
+        display: flex;
+        align-items: center;
+        gap: $spacing-md;
+        
+        .user-name {
+            color: $text-primary;
+            font-weight: 500;
+        }
+        
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: $primary-color;
+            @include flex-center;
+            color: $text-white;
+            font-weight: 600;
+        }
+    }
+}
+
+.main-content {
+    flex: 1;
+    padding: $spacing-2xl 0;
+}
+
+.main-footer {
+    background: $bg-gray-800;
+    color: $text-white;
+    padding: $spacing-xl 0;
+    text-align: center;
+    
+    p {
+        margin: 0;
+        opacity: 0.8;
+    }
+}
+
