@@ -11,12 +11,9 @@ use Illuminate\Support\Facades\Log;
 
 class DialogService
 {
-    // Dialog states (FSM)
+    // Simplified dialog states (no scripted scenarios)
     private const STATE_INITIAL = 'initial';
-    private const STATE_INITIAL_QUESTION = 'initial_question';
-    private const STATE_PRICE_CONFIRMATION = 'price_confirmation';
-    private const STATE_PRICE_UPDATE = 'price_update';
-    private const STATE_COMMISSION_INFO = 'commission_info';
+    private const STATE_ACTIVE = 'active';
     private const STATE_COMPLETED = 'completed';
 
     public function __construct(
@@ -75,50 +72,95 @@ class DialogService
             return;
         }
 
-        // Clean owner name
+        // Owner name cleanup
         $rawName = $objectData['ownerInfo'][0]['value'] ?? 'Клиент';
-        $cleanedName = $this->openAIService->cleanOwnerName($rawName);
+        $cleanedName = $this->extractOwnerName($rawName);
 
         // Prepare variables for templates
         $vars = [
             'name' => $cleanedName,
             'owner_name' => $cleanedName,
+            'owner_name_clean' => $cleanedName,
             'formattedAddDate' => $objectData['formattedAddDate'] ?? '',
             'objectCount' => $objectData['objectCount'] ?? '',
             'address' => $objectData['objectInfo'][0]['address'] ?? '',
         ];
 
-        // Messages from config
-        $messages = $this->getConfigMessages($config);
-
-        // Send greeting
-        $greetingTpl = $messages['greeting'] ?? '{name}, добрый день!';
-        $this->sendMessageWithDelay($chatId, $this->renderTemplate($greetingTpl, $vars), 0);
-
-        // Send initial question (two variants)
-        if (empty($objectData['objectCount']) || $objectData['objectCount'] === 'ноль') {
-            $initialTpl = $messages['initial_question_no_deals'] ?? (
-                'Я — ИИ компании Capital Mars. Мы работали с вами {formattedAddDate}. Видим, вы ее снова сдаете — верно? Если да, можем подключиться к сдаче вашей квартиры?'
-            );
-        } else {
-            $initialTpl = $messages['initial_question_with_deals'] ?? (
-                'Я — ИИ компании Capital Mars. Мы уже {objectCount} сдавали вашу квартиру на {address}. {name}, вы ее снова сдаете — верно? Если да, можем подключиться к сдаче вашей квартиры?'
-            );
-        }
-
-        $this->sendMessageWithDelay($chatId, $this->renderTemplate($initialTpl, $vars), 2000);
-
-        // Update session state
+        // No scripted scenario: mark as active and wait for user input
         $session->update([
-            'dialog_state' => ['state' => self::STATE_INITIAL_QUESTION],
+            'dialog_state' => ['state' => self::STATE_ACTIVE],
         ]);
 
-        // Update dialog
         $dialog->update([
-            'current_state' => self::STATE_INITIAL_QUESTION,
+            'current_state' => self::STATE_ACTIVE,
         ]);
 
         Log::info("Dialog initialized for chatId: {$chatId}");
+
+        // Generate and send the first assistant message via single LLM call
+        try {
+            $config = $botConfigId ? BotConfig::find($botConfigId) : null;
+            $systemPrompt = $config?->prompt ?? 'Ты - профессионал ИИ-ассистент компании Capital Mars. Отвечай кратко, по делу.';
+            $temperature = $config?->temperature ? (float) $config->temperature : null;
+            $maxTokens = $config?->max_tokens;
+
+            // Provide context as first user turn to steer the model for initial outreach
+            $kickoffInstruction = "{owner_name_clean}, добрый день!\n\nЯ — ИИ-ассистент Capital Mars. Мы уже {objectCount} сдавали вашу квартиру на {address}. Видим, что объявление снова актуально — верно? Если да, готовы подключиться к сдаче.";
+            $history = [
+                [ 'role' => 'user', 'content' => $this->renderTemplate($kickoffInstruction, $vars) ],
+            ];
+
+            $vectorIds = [];
+            if ($config?->vector_store_id_main) { $vectorIds[] = $config->vector_store_id_main; }
+            if ($config?->vector_store_id_objections) { $vectorIds[] = $config->vector_store_id_objections; }
+
+            if (!empty($vectorIds)) {
+                $result = $this->openAIService->chatWithRag($systemPrompt, $history, $temperature, $maxTokens, $vectorIds);
+            } else {
+                $result = $this->openAIService->chat($systemPrompt, $history, $temperature, $maxTokens);
+            }
+
+            $assistantReply = $result['content'] ?? '';
+            $responseId = $result['response_id'] ?? null;
+            $usage = $result['usage'] ?? ['prompt_tokens' => 0, 'completion_tokens' => 0];
+
+            if ($assistantReply !== '') {
+                Log::info('Initial assistant reply generated', [
+                    'len' => mb_strlen($assistantReply),
+                    'response_id' => $responseId,
+                    'tokens' => $usage,
+                ]);
+                $this->sendMessageWithDelay($chatId, $assistantReply, 0);
+
+                Message::create([
+                    'dialog_id' => $dialog->dialog_id,
+                    'role' => 'assistant',
+                    'content' => $assistantReply,
+                    'previous_response_id' => $responseId,
+                    'tokens_in' => $usage['prompt_tokens'] ?? 0,
+                    'tokens_out' => $usage['completion_tokens'] ?? 0,
+                ]);
+            } else {
+                Log::warning('Initial assistant reply is empty, using fallback template');
+                $fallback = $this->renderTemplate(
+                    "{name}, добрый день! Мы ранее работали по вашей квартире на {address}. Подскажите, вы снова её сдаёте? {commission_text}",
+                    [
+                        'name' => $vars['name'] ?? 'Добрый день',
+                        'address' => $vars['address'] ?? '',
+                        'commission_text' => 'Наша комиссия — 50% по факту заселения (как при прошлом сотрудничестве).',
+                    ]
+                );
+                $this->sendMessageWithDelay($chatId, $fallback, 0);
+                Message::create([
+                    'dialog_id' => $dialog->dialog_id,
+                    'role' => 'assistant',
+                    'content' => $fallback,
+                    'previous_response_id' => null,
+                ]);
+            }
+        } catch (\Exception $e) {
+            Log::error('Failed to send initial assistant message', [ 'error' => $e->getMessage() ]);
+        }
     }
 
     /**
@@ -151,29 +193,66 @@ class DialogService
             'meta' => $meta,
         ]);
 
-        // Get current state
-        $currentState = $session->dialog_state['state'] ?? self::STATE_INITIAL;
+        // Build history for single LLM call
+        $config = $session->bot_config_id ? BotConfig::find($session->bot_config_id) : null;
+        $systemPrompt = $config?->prompt ?? 'Ты - профессионал ИИ-ассистент компании Capital Mars. Отвечай кратко, по делу.';
+        $temperature = $config?->temperature ? (float) $config->temperature : null;
+        $maxTokens = $config?->max_tokens;
 
-        // Handle negative intents
-        if ($this->containsNegativeIntent($messageText)) {
-            $this->handleNegativeIntent($chatId, $dialog, $session);
-            return;
+        $historyMessages = Message::where('dialog_id', $dialog->dialog_id)
+            ->orderBy('created_at')
+            ->get(['role', 'content']);
+
+        $history = $historyMessages->map(function ($m) {
+            return [
+                'role' => $m->role,
+                'content' => $m->content,
+            ];
+        })->values()->all();
+
+        $vectorIds = [];
+        if ($config?->vector_store_id_main) {
+            $vectorIds[] = $config->vector_store_id_main;
+        }
+        if ($config?->vector_store_id_objections) {
+            $vectorIds[] = $config->vector_store_id_objections;
         }
 
-        // Handle pause intents
-        if ($this->containsPauseIntent($messageText)) {
-            $this->sendMessageWithDelay($chatId, 'Хорошо, жду вашего подтверждения. Напишите, когда можно продолжить.');
-            return;
+        // Prefer Responses API with RAG if vector stores configured
+        if (!empty($vectorIds)) {
+            $result = $this->openAIService->chatWithRag(
+                $systemPrompt,
+                $history,
+                $temperature,
+                $maxTokens,
+                $vectorIds
+            );
+        } else {
+            $result = $this->openAIService->chat(
+                $systemPrompt,
+                $history,
+                $temperature,
+                $maxTokens
+            );
         }
+        $assistantReply = $result['content'] ?? '';
+        $responseId = $result['response_id'] ?? null;
+        $usage = $result['usage'] ?? ['prompt_tokens' => 0, 'completion_tokens' => 0];
 
-        // Route message by state
-        match ($currentState) {
-            self::STATE_INITIAL_QUESTION => $this->handleInitialQuestionResponse($chatId, $messageText, $session, $dialog),
-            self::STATE_PRICE_CONFIRMATION => $this->handlePriceConfirmationResponse($chatId, $messageText, $session, $dialog),
-            self::STATE_PRICE_UPDATE => $this->handlePriceUpdateResponse($chatId, $messageText, $session, $dialog),
-            self::STATE_COMMISSION_INFO => $this->handleCommissionInfoResponse($chatId, $messageText, $session, $dialog),
-            default => Log::warning("Unknown state: {$currentState}"),
-        };
+        if ($assistantReply !== '') {
+            // Send via provider
+            $this->sendMessageWithDelay($chatId, $assistantReply, 1200);
+
+            // Save assistant message with previous_response_id
+            Message::create([
+                'dialog_id' => $dialog->dialog_id,
+                'role' => 'assistant',
+                'content' => $assistantReply,
+                'previous_response_id' => $responseId,
+                'tokens_in' => $usage['prompt_tokens'] ?? 0,
+                'tokens_out' => $usage['completion_tokens'] ?? 0,
+            ]);
+        }
     }
 
     /**
@@ -418,13 +497,7 @@ class DialogService
         try {
             $this->greenApiService->sendMessage($chatId, $message);
             
-            // Save assistant message
-            $dialog = Dialog::getOrCreate($chatId);
-            Message::create([
-                'dialog_id' => $dialog->dialog_id,
-                'role' => 'assistant',
-                'content' => $message,
-            ]);
+            // Persisting assistant messages is handled by caller in single-prompt flow
 
             Log::info("Message sent to chatId: {$chatId}", [
                 'message' => substr($message, 0, 50) . '...',
@@ -470,6 +543,34 @@ class DialogService
             $result = str_replace('{' . $key . '}', (string) $value, $result);
         }
         return $result;
+    }
+
+    /**
+     * Extract clean owner name from raw string using heuristic rules
+     */
+    private function extractOwnerName(string $raw): string
+    {
+        $s = $raw;
+        $s = preg_replace('/[\p{So}\p{Sk}]/u', '', $s) ?? $s; // emojis/symbols
+        $s = preg_replace('/["\'\(\)\[\]<>]/u', ' ', $s) ?? $s;
+        $s = preg_replace('/\b(собственник|собст\.?|соб\.?|владелец|агент|ооо|ип)\b/iu', ' ', $s) ?? $s;
+        $s = preg_replace('/[+]?\d[\d\s\-()]{6,}/u', ' ', $s) ?? $s; // phones
+        $s = preg_replace('/[\w.+-]+@\w+\.[\w.]+/u', ' ', $s) ?? $s; // emails
+        $s = preg_replace('/\/.*/u', ' ', $s) ?? $s; // cut after /
+        $s = preg_replace('/[,—-].*/u', ' ', $s) ?? $s; // cut after comma/dash
+        $s = preg_replace('/\s+/u', ' ', trim((string)$s)) ?? trim((string)$s);
+
+        if (preg_match('/\b[А-ЯЁ][а-яё]+(?:-[А-ЯЁ][а-яё]+)?\b/u', $s, $m)) {
+            return $m[0];
+        }
+        // Fallback: title case first token if Cyrillic
+        if (preg_match('/^([А-Яа-яЁё]+(?:-[А-Яа-яЁё]+)?)/u', $s, $m)) {
+            $name = mb_strtolower($m[1]);
+            $parts = explode('-', $name);
+            $parts = array_map(fn($p) => mb_strtoupper(mb_substr($p,0,1)) . mb_substr($p,1), $parts);
+            return implode('-', $parts);
+        }
+        return 'Добрый день';
     }
 }
 

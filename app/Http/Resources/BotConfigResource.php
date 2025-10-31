@@ -20,6 +20,8 @@ class BotConfigResource extends JsonResource
             'scenario_description' => $this->scenario_description,
             'temperature' => (float) $this->temperature,
             'max_tokens' => $this->max_tokens,
+            'vector_store_id_main' => $this->vector_store_id_main,
+            'vector_store_id_objections' => $this->vector_store_id_objections,
             
             'settings' => $this->settings,
             'created_at' => $this->created_at?->toISOString(),

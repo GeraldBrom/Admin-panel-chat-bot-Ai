@@ -20,10 +20,8 @@ onMounted(() => {
 
 const configForm = ref({
     prompt: '',
-    scenario_description: '',
     temperature: 0.7,
     max_tokens: 2000,
-    settings: {} as Record<string, any>,
 });
 
 const loading = computed(() => botStore.loading);
@@ -36,60 +34,11 @@ const platforms = [
     { value: 'whatsapp', label: 'WhatsApp', icon: '📱' },
 ];
 
-// Localization for prompts and messages
-const promptLabels: Record<string, string> = {
-    'analyze_response': 'Анализ ответов клиентов',
-    'is_objection': 'Проверка возражений',
-    'handle_objection': 'Обработка возражений',
-};
+// No per-intent prompts/messages in single-prompt mode
 
-const messageLabels: Record<string, string> = {
-    'greeting': 'Приветствие',
-    'initial_question_no_deals': 'Вопрос без сделок',
-    'initial_question_with_deals': 'Вопрос со сделками',
-    'price_confirmation_positive': 'Подтверждение цены (да)',
-    'price_confirmation_negative': 'Подтверждение цены (нет)',
-    'price_update_invalid': 'Неверная цена',
-    'price_update_success': 'Обновление цены',
-    'commission_info_positive': 'Информация о комиссии',
-    'final_success': 'Успешное завершение',
-    'final_negative': 'Негативное завершение',
-    'negative_intent': 'Негативный настрой',
-    'pause': 'Пауза',
-};
+// Removed scenario messages
 
-// Order for messages (scenario flow)
-const messageOrder = [
-    'greeting',
-    'initial_question_no_deals',
-    'initial_question_with_deals',
-    'price_confirmation_positive',
-    'price_confirmation_negative',
-    'price_update_invalid',
-    'price_update_success',
-    'commission_info_positive',
-    'final_success',
-    'final_negative',
-    'negative_intent',
-    'pause',
-];
-
-// Helper function to sort by order
-const sortMessages = (messages: Record<string, string>) => {
-    const sorted: Record<string, string> = {};
-    messageOrder.forEach(key => {
-        if (messages[key]) {
-            sorted[key] = messages[key];
-        }
-    });
-    // Add any remaining keys not in the order
-    Object.keys(messages).forEach(key => {
-        if (!sorted[key]) {
-            sorted[key] = messages[key];
-        }
-    });
-    return sorted;
-};
+// No sorting needed
 
 // Select config for editing
 const selectConfig = (config: BotConfig) => {
@@ -100,10 +49,8 @@ const selectConfig = (config: BotConfig) => {
         selectedConfig.value = config;
         configForm.value = {
             prompt: config.prompt,
-            scenario_description: config.scenario_description,
             temperature: config.temperature || 0.7,
             max_tokens: config.max_tokens || 2000,
-            settings: config.settings || {},
         };
     }
 };
@@ -200,48 +147,14 @@ const cancelEditing = () => {
                   <!-- View mode -->
                   <div class="config-section">
                     <h4>Промпт для ChatGPT</h4>
-                    <p class="config-text">{{ config.prompt }}</p>
+                    <div class="config-text config-text--pre">{{ config.prompt }}</div>
                   </div>
 
-                  <div class="config-section">
-                    <h4>Сценарий</h4>
-                    <p class="config-text">{{ config.scenario_description }}</p>
-                  </div>
+                  
 
-                  <div class="config-section">
-                    <h4>Параметры</h4>
-                    <div class="config-params">
-                      <div class="param">
-                        <span class="param-label">Temperature:</span>
-                        <span class="param-value">{{ config.temperature }}</span>
-                      </div>
-                      <div class="param">
-                        <span class="param-label">Max tokens:</span>
-                        <span class="param-value">{{ config.max_tokens }}</span>
-                      </div>
-                    </div>
-                  </div>
+                  
 
-                  <!-- Show prompts and messages settings -->
-                  <div v-if="config.settings?.prompts" class="config-section">
-                    <h4>Промпты для анализа</h4>
-                    <div class="config-params">
-                      <div class="param" v-for="(value, key) in config.settings.prompts" :key="key">
-                        <span class="param-label">{{ promptLabels[key] || key }}:</span>
-                        <span class="param-value param-value--truncate">{{ value.substring(0, 50) }}...</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div v-if="config.settings?.messages" class="config-section">
-                    <h4>Шаблоны сообщений</h4>
-                    <div class="config-params">
-                      <div class="param" v-for="(value, key) in sortMessages(config.settings.messages)" :key="key">
-                        <span class="param-label">{{ messageLabels[key] || key }}:</span>
-                        <span class="param-value param-value--full">{{ value }}</span>
-                      </div>
-                    </div>
-                  </div>
+                  
                 </template>
 
                 <template v-else>
@@ -251,21 +164,10 @@ const cancelEditing = () => {
                     <textarea
                       v-model="configForm.prompt"
                       class="form-textarea"
-                      rows="5"
+                      rows="40"
                       placeholder="Введите системный промпт для ChatGPT..."
                     />
                     <small class="form-help">Этот промпт определяет поведение и стиль ответов бота</small>
-                  </div>
-
-                  <div class="form-group">
-                    <label class="form-label">Сценарий *</label>
-                    <textarea
-                      v-model="configForm.scenario_description"
-                      class="form-textarea"
-                      rows="5"
-                      placeholder="Опишите сценарий диалога..."
-                    />
-                    <small class="form-help">Сценарий определяет логику и последовательность диалога</small>
                   </div>
 
                   <div class="form-row">
@@ -295,33 +197,7 @@ const cancelEditing = () => {
                     </div>
                   </div>
 
-                  <!-- Edit Prompts -->
-                  <div v-if="configForm.settings?.prompts" class="config-section config-section--editable">
-                    <h4>Промпты для анализа</h4>
-                    <div class="form-group" v-for="(value, key) in configForm.settings.prompts" :key="key">
-                      <label class="form-label">{{ promptLabels[key] || key }}</label>
-                      <textarea
-                        v-model="configForm.settings.prompts[key]"
-                        class="form-textarea"
-                        rows="8"
-                        :placeholder="`Введите промпт для ${promptLabels[key] || key}...`"
-                      />
-                    </div>
-                  </div>
-
-                  <!-- Edit Messages -->
-                  <div v-if="configForm.settings?.messages" class="config-section config-section--editable">
-                    <h4>Шаблоны сообщений</h4>
-                    <div class="form-group" v-for="(value, key) in sortMessages(configForm.settings.messages)" :key="key">
-                      <label class="form-label">{{ messageLabels[key] || key }}</label>
-                      <textarea
-                        v-model="configForm.settings.messages[key]"
-                        class="form-textarea"
-                        rows="3"
-                        :placeholder="`Введите шаблон для ${messageLabels[key] || key}...`"
-                      />
-                    </div>
-                  </div>
+                  
 
                   <div class="config-card__footer">
                     <button class="btn btn--ghost" @click="cancelEditing">Отмена</button>
@@ -339,3 +215,9 @@ const cancelEditing = () => {
     </div>
   </MainLayout>
 </template>
+<style scoped>
+.config-text--pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+</style>

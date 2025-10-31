@@ -14,6 +14,7 @@ class Message extends Model
         'dialog_id',
         'role',
         'content',
+        'previous_response_id',
         'tokens_in',
         'tokens_out',
         'meta',
@@ -21,6 +22,7 @@ class Message extends Model
 
     protected $casts = [
         'content' => 'string', // JSON string
+        'previous_response_id' => 'string',
         'meta' => 'array',
         'tokens_in' => 'integer',
         'tokens_out' => 'integer',

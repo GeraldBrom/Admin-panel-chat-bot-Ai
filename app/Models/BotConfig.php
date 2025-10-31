@@ -16,12 +16,16 @@ class BotConfig extends Model
         'scenario_description',
         'temperature',
         'max_tokens',
+        'vector_store_id_main',
+        'vector_store_id_objections',
         'settings',
     ];
 
     protected $casts = [
         'temperature' => 'decimal:2',
         'max_tokens' => 'integer',
+        'vector_store_id_main' => 'string',
+        'vector_store_id_objections' => 'string',
         'settings' => 'array',
     ];
 
