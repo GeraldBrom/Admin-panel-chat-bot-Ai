@@ -22,6 +22,8 @@ const handleLogout = async () => {
           
           <nav class="header-nav">
             <router-link to="/dashboard" active-class="active">Главная</router-link>
+            <router-link to="/chat-bots" active-class="active">Чат боты</router-link>
+            <router-link to="/bot-management" active-class="active">Управление ботами</router-link>
           </nav>
           
           <div class="header-user">
@@ -37,12 +39,6 @@ const handleLogout = async () => {
     <main class="main-content">
       <slot />
     </main>
-
-    <footer class="main-footer">
-      <div class="container">
-        <p>&copy; 2024 Admin Panel Chat Bot. Все права защищены.</p>
-      </div>
-    </footer>
   </div>
 </template>
 

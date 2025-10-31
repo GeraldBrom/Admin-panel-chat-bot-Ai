@@ -4,6 +4,8 @@ import authService from '@/services/authService';
 // Lazy loading компонентов
 const Login = () => import('@/views/Login.vue');
 const Dashboard = () => import('@/views/Dashboard.vue');
+const ChatBots = () => import('@/views/ChatBots.vue');
+const BotManagement = () => import('@/views/BotManagement.vue');
 
 const routes: RouteRecordRaw[] = [
     {
@@ -29,6 +31,24 @@ const routes: RouteRecordRaw[] = [
         },
     },
     {
+        path: '/chat-bots',
+        name: 'chat-bots',
+        component: ChatBots,
+        meta: { 
+            requiresAuth: true,
+            title: 'Чат боты',
+        },
+    },
+    {
+        path: '/bot-management',
+        name: 'bot-management',
+        component: BotManagement,
+        meta: { 
+            requiresAuth: true,
+            title: 'Управление чат ботами',
+        },
+    },
+    {
         path: '/:pathMatch(.*)*',
         redirect: '/dashboard',
     },
@@ -40,7 +60,7 @@ const router = createRouter({
 });
 
 // Navigation guard
-router.beforeEach((to, from, next) => {
+router.beforeEach((to, _from, next) => {
     const isAuthenticated = authService.isAuthenticated();
     const requiresAuth = to.meta.requiresAuth;
     const requiresGuest = to.meta.requiresGuest;

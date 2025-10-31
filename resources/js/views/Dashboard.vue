@@ -27,12 +27,6 @@ const userName = computed(() => authStore.userName || 'Пользователь'
           <p class="stat-number">0</p>
           <span class="stat-label">За последние 24 часа</span>
         </div>
-        
-        <div class="stat-card">
-          <h3>Активных пользователей</h3>
-          <p class="stat-number">1</p>
-          <span class="stat-label">Онлайн сейчас</span>
-        </div>
       </div>
 
       <div class="dashboard-content">
@@ -42,8 +36,7 @@ const userName = computed(() => authStore.userName || 'Пользователь'
           <ul>
             <li>Создавать и настраивать чат-ботов</li>
             <li>Отслеживать статистику сообщений</li>
-            <li>Управлять пользователями</li>
-            <li>Просматривать аналитику</li>
+            <li>Следить за чат историей</li>
           </ul>
         </div>
       </div>
