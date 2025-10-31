@@ -1,6 +1,6 @@
 import { useAuthStore } from '@/stores/authStore';
 import { useRouter } from 'vue-router';
-import type { LoginCredentials, RegisterData } from '@/types';
+import type { LoginCredentials } from '@/types';
 
 export function useAuth() {
     const authStore = useAuthStore();
@@ -12,16 +12,6 @@ export function useAuth() {
             router.push({ name: 'dashboard' });
         } catch (error) {
             console.error('Login failed:', error);
-            throw error;
-        }
-    };
-
-    const register = async (data: RegisterData) => {
-        try {
-            await authStore.register(data);
-            router.push({ name: 'dashboard' });
-        } catch (error) {
-            console.error('Registration failed:', error);
             throw error;
         }
     };
@@ -43,7 +33,6 @@ export function useAuth() {
         userName: authStore.userName,
         userEmail: authStore.userEmail,
         login,
-        register,
         logout,
         clearError: authStore.clearError,
     };

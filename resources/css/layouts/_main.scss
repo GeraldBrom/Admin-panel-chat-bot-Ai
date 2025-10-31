@@ -47,16 +47,6 @@
             color: $text-primary;
             font-weight: 500;
         }
-        
-        .user-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: $primary-color;
-            @include flex-center;
-            color: $text-white;
-            font-weight: 600;
-        }
     }
 }
 

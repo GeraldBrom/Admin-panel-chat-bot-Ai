@@ -1,73 +1,3 @@
-<template>
-  <div class="auth-page">
-    <div class="auth-card">
-      <div class="auth-logo">A</div>
-      
-      <div class="auth-header">
-        <h1>Добро пожаловать!</h1>
-        <p>Войдите в вашу учетную запись</p>
-      </div>
-
-      <form @submit.prevent="handleSubmit" class="auth-form">
-        <div class="form-group">
-          <label for="email" class="form-label">Email</label>
-          <input
-            id="email"
-            v-model="formData.email"
-            type="email"
-            class="form-input"
-            :class="{ error: errors.email }"
-            placeholder="your@email.com"
-            required
-          />
-          <span v-if="errors.email" class="form-error">{{ errors.email }}</span>
-        </div>
-
-        <div class="form-group">
-          <label for="password" class="form-label">Пароль</label>
-          <input
-            id="password"
-            v-model="formData.password"
-            type="password"
-            class="form-input"
-            :class="{ error: errors.password }"
-            placeholder="••••••••"
-            required
-          />
-          <span v-if="errors.password" class="form-error">{{ errors.password }}</span>
-        </div>
-
-        <div class="form-checkbox">
-          <input
-            id="remember"
-            v-model="formData.remember"
-            type="checkbox"
-          />
-          <label for="remember">Запомнить меня</label>
-        </div>
-
-        <div v-if="error" class="form-error text-center mb-2">
-          {{ error }}
-        </div>
-
-        <div class="form-actions">
-          <button
-            type="submit"
-            class="btn btn--primary btn--block"
-            :disabled="loading"
-          >
-            {{ loading ? 'Вход...' : 'Войти' }}
-          </button>
-        </div>
-      </form>
-
-      <div class="auth-footer">
-        <p>Нет аккаунта? <router-link to="/register">Зарегистрируйтесь</router-link></p>
-      </div>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
 import { reactive, ref } from 'vue';
 import { useAuth } from '@/composables/useAuth';
@@ -127,4 +57,63 @@ const handleSubmit = async () => {
   }
 };
 </script>
+
+<template>
+  <div class="auth-page">
+    <div class="auth-card">
+      <form @submit.prevent="handleSubmit" class="auth-form">
+        <div class="form-group">
+          <label for="email" class="form-label">Email</label>
+          <input
+            id="email"
+            v-model="formData.email"
+            type="email"
+            class="form-input"
+            :class="{ error: errors.email }"
+            placeholder="your@email.com"
+            required
+          />
+          <span v-if="errors.email" class="form-error">{{ errors.email }}</span>
+        </div>
+
+        <div class="form-group">
+          <label for="password" class="form-label">Пароль</label>
+          <input
+            id="password"
+            v-model="formData.password"
+            type="password"
+            class="form-input"
+            :class="{ error: errors.password }"
+            placeholder="••••••••"
+            required
+          />
+          <span v-if="errors.password" class="form-error">{{ errors.password }}</span>
+        </div>
+
+        <div class="form-checkbox">
+          <input
+            id="remember"
+            v-model="formData.remember"
+            type="checkbox"
+          />
+          <label for="remember">Запомнить меня</label>
+        </div>
+
+        <div v-if="error" class="form-error text-center mb-2">
+          {{ error }}
+        </div>
+
+        <div class="form-actions">
+          <button
+            type="submit"
+            class="btn btn--primary btn--block"
+            :disabled="loading"
+          >
+            {{ loading ? 'Вход...' : 'Войти' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</template>
 

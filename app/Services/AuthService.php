@@ -14,30 +14,6 @@ class AuthService
     ) {}
 
     /**
-     * Регистрация нового пользователя
-     */
-    public function register(array $data): array
-    {
-        // Проверка, что email не занят
-        if ($this->userRepository->findByEmail($data['email'])) {
-            throw ValidationException::withMessages([
-                'email' => ['Этот email уже зарегистрирован.'],
-            ]);
-        }
-
-        // Создание пользователя
-        $user = $this->userRepository->create($data);
-
-        // Создание токена
-        $token = $user->createToken('auth-token')->plainTextToken;
-
-        return [
-            'user' => $user,
-            'token' => $token,
-        ];
-    }
-
-    /**
      * Авторизация пользователя
      */
     public function login(string $email, string $password, bool $remember = false): array

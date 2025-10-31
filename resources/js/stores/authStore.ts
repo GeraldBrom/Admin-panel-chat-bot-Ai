@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import authService from '@/services/authService';
-import type { User, LoginCredentials, RegisterData } from '@/types';
+import type { User, LoginCredentials } from '@/types';
 
 export const useAuthStore = defineStore('auth', () => {
     // State
@@ -32,28 +32,6 @@ export const useAuthStore = defineStore('auth', () => {
             return true;
         } catch (err: any) {
             error.value = err.response?.data?.message || 'Ошибка авторизации';
-            throw err;
-        } finally {
-            loading.value = false;
-        }
-    }
-
-    async function register(data: RegisterData) {
-        try {
-            loading.value = true;
-            error.value = null;
-
-            const response = await authService.register(data);
-            
-            user.value = response.user;
-            token.value = response.token;
-            
-            authService.saveToken(response.token);
-            authService.saveUser(response.user);
-            
-            return true;
-        } catch (err: any) {
-            error.value = err.response?.data?.message || 'Ошибка регистрации';
             throw err;
         } finally {
             loading.value = false;
@@ -122,7 +100,6 @@ export const useAuthStore = defineStore('auth', () => {
         
         // Actions
         login,
-        register,
         logout,
         fetchUser,
         clearError,

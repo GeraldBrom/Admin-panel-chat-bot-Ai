@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\LoginRequest;
-use App\Http\Requests\RegisterRequest;
 use App\Http\Resources\UserResource;
 use App\Services\AuthService;
 use Illuminate\Http\JsonResponse;
@@ -16,34 +15,6 @@ class AuthController extends Controller
     public function __construct(
         private AuthService $authService
     ) {}
-
-    /**
-     * Регистрация нового пользователя
-     */
-    public function register(RegisterRequest $request): JsonResponse
-    {
-        try {
-            $result = $this->authService->register($request->validated());
-
-            return response()->json([
-                'message' => 'Регистрация успешна!',
-                'user' => new UserResource($result['user']),
-                'token' => $result['token'],
-            ], 201);
-        } catch (ValidationException $e) {
-            return response()->json([
-                'message' => 'Ошибка валидации',
-                'errors' => $e->errors(),
-            ], 422);
-        } catch (\Exception $e) {
-            Log::error('Registration error: ' . $e->getMessage());
-            
-            return response()->json([
-                'message' => 'Ошибка при регистрации',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
-    }
 
     /**
      * Авторизация пользователя

@@ -3,7 +3,6 @@ import authService from '@/services/authService';
 
 // Lazy loading компонентов
 const Login = () => import('@/views/Login.vue');
-const Register = () => import('@/views/Register.vue');
 const Dashboard = () => import('@/views/Dashboard.vue');
 
 const routes: RouteRecordRaw[] = [
@@ -18,15 +17,6 @@ const routes: RouteRecordRaw[] = [
         meta: { 
             requiresGuest: true,
             title: 'Вход',
-        },
-    },
-    {
-        path: '/register',
-        name: 'register',
-        component: Register,
-        meta: { 
-            requiresGuest: true,
-            title: 'Регистрация',
         },
     },
     {

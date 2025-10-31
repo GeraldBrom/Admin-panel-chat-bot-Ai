@@ -17,34 +17,6 @@
     }
 }
 
-.auth-header {
-    text-align: center;
-    margin-bottom: $spacing-2xl;
-    
-    h1 {
-        font-size: 1.75rem;
-        color: $text-primary;
-        margin-bottom: $spacing-sm;
-    }
-    
-    p {
-        color: $text-secondary;
-        font-size: $font-size-base;
-    }
-}
-
-.auth-logo {
-    width: 60px;
-    height: 60px;
-    margin: 0 auto $spacing-lg;
-    @include flex-center;
-    background: linear-gradient(135deg, $primary-color 0%, $secondary-color 100%);
-    border-radius: $border-radius-lg;
-    color: $text-white;
-    font-size: 1.5rem;
-    font-weight: 700;
-}
-
 .auth-form {
     .form-group {
         margin-bottom: $spacing-lg;

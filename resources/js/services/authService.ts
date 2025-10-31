@@ -1,7 +1,6 @@
 import api from './api';
 import type { 
     LoginCredentials, 
-    RegisterData, 
     AuthResponse, 
     User,
     ApiResponse 
@@ -9,24 +8,14 @@ import type {
 
 class AuthService {
     /**
-     * Регистрация нового пользователя
-     */
-    async register(data: RegisterData): Promise<AuthResponse> {
-        const response = await api.post<ApiResponse<AuthResponse>>('/auth/register', data);
-        return {
-            user: response.data.data.user,
-            token: response.data.data.token,
-        };
-    }
-
-    /**
      * Авторизация пользователя
      */
     async login(credentials: LoginCredentials): Promise<AuthResponse> {
-        const response = await api.post<ApiResponse<AuthResponse>>('/auth/login', credentials);
+        const response = await api.post<any>('/auth/login', credentials);
+        // Laravel возвращает { message, user, token } напрямую
         return {
-            user: response.data.data.user,
-            token: response.data.data.token,
+            user: response.data.user,
+            token: response.data.token,
         };
     }
 
@@ -41,8 +30,9 @@ class AuthService {
      * Получить текущего пользователя
      */
     async me(): Promise<User> {
-        const response = await api.get<ApiResponse<{ user: User }>>('/auth/me');
-        return response.data.data.user;
+        const response = await api.get<any>('/auth/me');
+        // Laravel возвращает { user } напрямую
+        return response.data.user;
     }
 
     /**

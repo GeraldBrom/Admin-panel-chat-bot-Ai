@@ -16,7 +16,6 @@ use Illuminate\Support\Facades\Route;
 
 // Публичные маршруты авторизации
 Route::prefix('auth')->group(function () {
-    Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
 });
 
