@@ -66,7 +66,6 @@ onMounted(() => {
     overflow-y: auto;
     padding: $spacing-md;
     background: $bg-gray-50;
-    border-radius: $border-radius;
     
     &__items {
         display: flex;

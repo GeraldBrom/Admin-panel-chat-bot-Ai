@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
+import MessageList from './MessageList.vue';
 import type { Message } from '@/types';
 
 interface Props {
@@ -72,10 +73,7 @@ const handleKeyPress = (event: KeyboardEvent) => {
     display: flex;
     flex-direction: column;
     height: 100%;
-    min-height: 400px;
-    border: 1px solid $border-color;
-    border-radius: $border-radius;
-    overflow: hidden;
+    flex: 1;
     
     &__input {
         display: flex;
@@ -88,14 +86,14 @@ const handleKeyPress = (event: KeyboardEvent) => {
 
 .message-input {
     flex: 1;
-    min-height: 60px;
+    min-height: 50px;
     max-height: 150px;
     padding: $spacing-md;
     border: 1px solid $border-color;
-    border-radius: $border-radius-sm;
+    border-radius: $border-radius;
     font-size: $font-size-base;
     font-family: $font-family;
-    resize: vertical;
+    resize: none;
     transition: border-color $transition-base;
     
     &:focus {

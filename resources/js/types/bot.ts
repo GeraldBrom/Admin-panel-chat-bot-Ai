@@ -11,7 +11,7 @@ export interface Bot {
 export interface ChatBot {
     id: number;
     name: string;
-    platform: 'whatsapp' | 'telegram' | 'vk' | 'max';
+    platform: 'whatsapp' | 'telegram' | 'max';
     client_phone?: string;
     object_id: string;
     status: 'online' | 'offline' | 'processing';
@@ -22,7 +22,7 @@ export interface ChatBot {
 }
 
 export interface PlatformConfig {
-    platform: 'whatsapp' | 'telegram' | 'vk' | 'max';
+    platform: 'whatsapp' | 'telegram' | 'max';
     api_key?: string;
     bot_token?: string;
     webhook_url?: string;
@@ -65,7 +65,7 @@ export interface BotConfig {
 // Create/Update DTOs
 export interface CreateChatBotData {
     name: string;
-    platform: 'whatsapp' | 'telegram' | 'vk' | 'max';
+    platform: 'whatsapp' | 'telegram' | 'max';
     client_phone?: string;
     object_id: string;
     platform_config?: Partial<PlatformConfig>;

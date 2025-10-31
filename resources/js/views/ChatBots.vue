@@ -2,22 +2,18 @@
 import { ref, onMounted, computed } from 'vue';
 import MainLayout from '@/layouts/MainLayout.vue';
 import ChatBotCard from '@/components/ChatBotCard.vue';
-import SessionList from '@/components/SessionList.vue';
 import BotDialog from '@/components/BotDialog.vue';
 import { useBotStore } from '@/stores/botStore';
-import type { ChatBot, BotSession, Message } from '@/types';
+import type { ChatBot } from '@/types';
 
 const botStore = useBotStore();
 
 const selectedBot = ref<ChatBot | null>(null);
-const selectedSession = ref<BotSession | null>(null);
 const showCreateBotModal = ref(false);
-const showCreateSessionModal = ref(false);
-const activeTab = ref<'bots' | 'sessions' | 'messages'>('bots');
 
 const newBotForm = ref({
     name: '',
-    platform: 'max' as 'whatsapp' | 'telegram' | 'vk' | 'max',
+    platform: 'max' as 'whatsapp' | 'telegram' | 'max',
     client_phone: '',
     object_id: '',
 });
@@ -30,31 +26,11 @@ onMounted(async () => {
     await botStore.fetchAllChatBots();
 });
 
-// Select bot and load its sessions
+// Select bot and load its messages
 const selectBot = async (bot: ChatBot) => {
     selectedBot.value = bot;
-    selectedSession.value = null;
-    botStore.clearCurrentData();
-    await botStore.fetchBotSessions(bot.id);
-    activeTab.value = 'sessions';
-};
-
-// Select session and load its messages
-const selectSession = async (session: BotSession) => {
-    selectedSession.value = session;
-    await botStore.fetchSessionMessages(session.id);
-    activeTab.value = 'messages';
-};
-
-// Handle session actions
-const pauseSession = async (session: BotSession) => {
-    await botStore.pauseSession(session.id);
-    await botStore.fetchBotSessions(selectedBot.value!.id);
-};
-
-const resumeSession = async (session: BotSession) => {
-    await botStore.resumeSession(session.id);
-    await botStore.fetchBotSessions(selectedBot.value!.id);
+    // Загружаем последние сообщения для выбранного бота
+    // await botStore.fetchSessionMessages(bot.id);
 };
 
 // Handle delete bot
@@ -63,7 +39,6 @@ const deleteBot = async (bot: ChatBot) => {
         await botStore.deleteChatBot(bot.id);
         if (selectedBot.value?.id === bot.id) {
             selectedBot.value = null;
-            selectedSession.value = null;
         }
     }
 };
@@ -84,25 +59,39 @@ const createBot = async () => {
     }
 };
 
-// Create session
-const createSession = async () => {
-    if (!selectedBot.value) return;
-    
+// Toggle bot status
+const toggleBot = async (bot: ChatBot) => {
     try {
-        const session = await botStore.createSession({ chat_bot_id: selectedBot.value.id });
-        await botStore.fetchBotSessions(selectedBot.value.id);
-        selectSession(session);
+        const newStatus = bot.status === 'online' ? 'offline' : 'online';
+        await botStore.updateChatBot(bot.id, { status: newStatus });
     } catch (err) {
-        console.error('Failed to create session:', err);
+        console.error('Failed to toggle bot:', err);
+    }
+};
+
+// Stop all bots
+const stopAllBots = async () => {
+    if (confirm('Остановить всех ботов?')) {
+        try {
+            for (const bot of botStore.chatBots) {
+                if (bot.status === 'online') {
+                    await botStore.updateChatBot(bot.id, { status: 'offline' });
+                }
+            }
+        } catch (err) {
+            console.error('Failed to stop all bots:', err);
+        }
     }
 };
 
 // Send message
 const sendMessage = async (content: string) => {
-    if (!selectedSession.value) return;
+    if (!selectedBot.value) return;
     
     try {
-        await botStore.sendMessage(selectedSession.value.id, content);
+        // Отправляем сообщение напрямую в чат с ботом
+        // await botStore.sendMessage(selectedBot.value.id, content);
+        console.log('Sending message to bot:', selectedBot.value.id, content);
     } catch (err) {
         console.error('Failed to send message:', err);
     }
@@ -117,12 +106,20 @@ const sendMessage = async (content: string) => {
           <h1>Чат боты</h1>
           <p>Управление чат-ботами и их сессиями</p>
         </div>
-        <button 
-          class="btn btn--primary"
-          @click="showCreateBotModal = true"
-        >
-          + Создать бота
-        </button>
+        <div class="page-header__actions">
+          <button 
+            class="btn btn--danger"
+            @click="stopAllBots"
+          >
+            ⏸️ Остановить всех
+          </button>
+          <button 
+            class="btn btn--primary"
+            @click="showCreateBotModal = true"
+          >
+            + Создать бота
+          </button>
+        </div>
       </div>
 
       <!-- Error message -->
@@ -144,64 +141,29 @@ const sendMessage = async (content: string) => {
               @select="selectBot"
               @edit="() => {}"
               @delete="deleteBot"
+              @toggle="toggleBot"
             />
           </div>
         </div>
 
-        <!-- Selected bot details -->
-        <div v-if="selectedBot" class="details-section">
-          <!-- Tabs -->
-          <div class="tabs">
-            <button
-              class="tab"
-              :class="{ 'tab--active': activeTab === 'sessions' }"
-              @click="activeTab = 'sessions'"
-            >
-              Сессии
-            </button>
-            <button
-              v-if="selectedSession"
-              class="tab"
-              :class="{ 'tab--active': activeTab === 'messages' }"
-              @click="activeTab = 'messages'"
-            >
-              Сообщения
-            </button>
-          </div>
-
-          <!-- Sessions tab -->
-          <div v-if="activeTab === 'sessions'" class="tab-content">
-            <div class="tab-content__header">
-              <h3>Сессии бота</h3>
-              <button 
-                class="btn btn--primary btn--sm"
-                @click="createSession"
-              >
-                + Создать сессию
-              </button>
+        <!-- Chat section -->
+        <div v-if="selectedBot" class="chat-section">
+          <div class="chat-header">
+            <div class="chat-header__info">
+              <h2>{{ selectedBot.name }}</h2>
+              <span class="chat-platform">{{ selectedBot.platform }}</span>
             </div>
-            <SessionList
-              :sessions="botStore.sessions"
-              :selectedSessionId="selectedSession?.id"
-              @select="selectSession"
-              @pause="pauseSession"
-              @resume="resumeSession"
-            />
           </div>
-
-          <!-- Messages tab -->
-          <div v-if="activeTab === 'messages' && selectedSession" class="tab-content">
-            <BotDialog
-              :messages="botStore.messages"
-              :loading="loading"
-              @send="sendMessage"
-            />
-          </div>
+          <BotDialog
+            :messages="botStore.messages"
+            :loading="loading"
+            @send="sendMessage"
+          />
         </div>
 
         <!-- Empty state -->
-        <div v-else class="empty-details">
-          <p>Выберите бота для просмотра деталей</p>
+        <div v-else class="empty-chat">
+          <p>Выберите бота для начала диалога</p>
         </div>
       </div>
 
@@ -228,7 +190,6 @@ const sendMessage = async (content: string) => {
                 <option value="max">MAX</option>
                 <option value="whatsapp">WhatsApp</option>
                 <option value="telegram">Telegram</option>
-                <option value="vk">VK</option>
               </select>
             </div>
             <div class="form-group">
@@ -261,4 +222,3 @@ const sendMessage = async (content: string) => {
     </div>
   </MainLayout>
 </template>
-

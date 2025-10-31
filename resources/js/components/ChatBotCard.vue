@@ -15,6 +15,7 @@ const emit = defineEmits<{
     (e: 'select', bot: ChatBot): void;
     (e: 'edit', bot: ChatBot): void;
     (e: 'delete', bot: ChatBot): void;
+    (e: 'toggle', bot: ChatBot): void;
 }>();
 
 const statusClass = computed(() => {
@@ -43,7 +44,6 @@ const platformIcon = computed(() => {
     const icons: Record<string, string> = {
         whatsapp: '📱',
         telegram: '✈️',
-        vk: '💬',
         max: '🤖',
     };
     return icons[props.bot.platform] || '🤖';
@@ -53,7 +53,6 @@ const platformLabel = computed(() => {
     const labels: Record<string, string> = {
         whatsapp: 'WhatsApp',
         telegram: 'Telegram',
-        vk: 'VK',
         max: 'MAX',
     };
     return labels[props.bot.platform] || 'Unknown';
@@ -96,6 +95,10 @@ const platformLabel = computed(() => {
                         {{ platformLabel }}
                     </span>
                 </div>
+                <div class="info-item" v-if="bot.client_phone">
+                    <span class="info-label">Телефон:</span>
+                    <span class="info-value">{{ bot.client_phone }}</span>
+                </div>
                 <div class="info-item">
                     <span class="info-label">ID объекта:</span>
                     <span class="info-value">{{ bot.object_id }}</span>
@@ -112,6 +115,16 @@ const platformLabel = computed(() => {
                 <span class="stat-number">{{ bot.total_messages }}</span>
                 <span class="stat-label">Сообщений</span>
             </div>
+        </div>
+        
+        <div class="chat-bot-card__controls">
+            <button 
+                class="btn btn--sm"
+                :class="bot.status === 'online' ? 'btn--danger' : 'btn--success'"
+                @click.stop="emit('toggle', bot)"
+            >
+                {{ bot.status === 'online' ? '⏸️ Остановить' : '▶️ Запустить' }}
+            </button>
         </div>
     </div>
 </template>
@@ -241,6 +254,17 @@ const platformLabel = computed(() => {
 
 .btn--danger:hover {
     color: $danger-color;
+}
+
+.chat-bot-card__controls {
+    padding-top: $spacing-md;
+    margin-top: $spacing-md;
+    border-top: 1px solid $border-color;
+    
+    .btn {
+        width: 100%;
+        justify-content: center;
+    }
 }
 </style>
 
