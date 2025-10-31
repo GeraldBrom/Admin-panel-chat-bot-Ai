@@ -111,7 +111,7 @@ class OpenAIService
     /**
      * Analyze user response (positive/negative/neutral)
      */
-    public function analyzeResponse(string $responseText): ?bool
+    public function analyzeResponse(string $responseText, ?string $systemPrompt = null, ?float $temperature = null, ?int $maxTokens = null): ?bool
     {
         try {
             $response = $this->getHttpClient()->post("{$this->getBaseUrl()}/chat/completions", [
@@ -119,7 +119,8 @@ class OpenAIService
                 'messages' => [
                     [
                         'role' => 'system',
-                        'content' => "Ты - помощник для анализа ответов клиентов в бизнес-диалоге.\n\n" .
+                        'content' => $systemPrompt ?? (
+                            "Ты - помощник для анализа ответов клиентов в бизнес-диалоге.\n\n" .
                             "Определи, является ли ответ положительным (согласие, подтверждение) или отрицательным (отказ, несогласие).\n\n" .
                             "ВАЖНО: Если клиент отвечает кратко в бизнес-диалоге, это обычно означает согласие.\n\n" .
                             "ПОЛОЖИТЕЛЬНЫЕ: да, согласен, верно, правильно, хорошо, ок, понял, ладно, давай\n" .
@@ -129,15 +130,16 @@ class OpenAIService
                             "- 'true' если ПОЛОЖИТЕЛЬНЫЙ\n" .
                             "- 'false' если ОТРИЦАТЕЛЬНЫЙ\n" .
                             "- 'neutral' если НЕЙТРАЛЬНЫЙ\n\n" .
-                            "Не добавляй пояснений.",
+                            "Не добавляй пояснений."
+                        ),
                     ],
                     [
                         'role' => 'user',
                         'content' => "Проанализируй следующий ответ клиента:\n\n\"{$responseText}\"",
                     ],
                 ],
-                'temperature' => 0.2,
-                'max_tokens' => 10,
+                'temperature' => $temperature ?? 0.2,
+                'max_tokens' => $maxTokens ?? 10,
             ]);
 
             if ($response->successful()) {
@@ -170,7 +172,7 @@ class OpenAIService
     /**
      * Check if message is an objection
      */
-    public function isObjection(string $message): bool
+    public function isObjection(string $message, ?string $systemPrompt = null, ?float $temperature = null, ?int $maxTokens = null): bool
     {
         try {
             $response = $this->getHttpClient()->post("{$this->getBaseUrl()}/chat/completions", [
@@ -178,7 +180,8 @@ class OpenAIService
                 'messages' => [
                     [
                         'role' => 'system',
-                        'content' => "Ты - помощник для анализа сообщений клиентов в контексте аренды недвижимости.\n\n" .
+                        'content' => $systemPrompt ?? (
+                            "Ты - помощник для анализа сообщений клиентов в контексте аренды недвижимости.\n\n" .
                             "ВОЗРАЖЕНИЯ:\n" .
                             "- Сомнения о комиссии (большая комиссия, высокий процент)\n" .
                             "- Вопросы о качестве услуг (зачем агентство, я сам найду)\n" .
@@ -191,15 +194,16 @@ class OpenAIService
                             "- Второй отказ и более или жесткий отказ БЕЗ объяснений\n" .
                             "- Приветствия и благодарности без контекста\n\n" .
                             "ВАЖНО: Если клиент объясняет причину отказа или выражает сомнение - это ВОЗРАЖЕНИЕ!\n\n" .
-                            "Отвечай ТОЛЬКО 'true' или 'false'",
+                            "Отвечай ТОЛЬКО 'true' или 'false'"
+                        ),
                     ],
                     [
                         'role' => 'user',
                         'content' => "Проанализируй сообщение:\n\n\"{$message}\"\n\nЭто возражение?",
                     ],
                 ],
-                'temperature' => 0.3,
-                'max_tokens' => 10,
+                'temperature' => $temperature ?? 0.3,
+                'max_tokens' => $maxTokens ?? 10,
             ]);
 
             if ($response->successful()) {

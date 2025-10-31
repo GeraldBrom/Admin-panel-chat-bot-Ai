@@ -29,7 +29,7 @@ class BotSessionResource extends JsonResource
             'dialog_id' => $this->whenLoaded('dialog', function () {
                 return $this->dialog->dialog_id ?? null;
             }),
-            'messages' => $this->whenLoaded('dialog.messages', function () {
+            'messages' => $this->whenLoaded('dialog', function () {
                 return $this->dialog->messages->map(function ($message) {
                     return [
                         'id' => $message->id,

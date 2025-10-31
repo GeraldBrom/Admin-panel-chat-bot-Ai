@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, watch, onBeforeUnmount } from 'vue';
 import MainLayout from '@/layouts/MainLayout.vue';
 import ChatBotCard from '@/components/ChatBotCard.vue';
 import BotDialog from '@/components/BotDialog.vue';
@@ -22,33 +22,92 @@ const error = computed(() => botStore.error);
 
 // Load bots on mount
 onMounted(async () => {
+    console.log('[ChatBots] onMounted: fetching all chat bots...');
+    try {
     await botStore.fetchAllChatBots();
+        console.log('[ChatBots] Bots loaded:', botStore.chatBots);
+    } catch (e) {
+        console.error('[ChatBots] Failed to load bots on mount:', e);
+    }
 });
 
 // Select bot and load its messages
 const selectBot = async (bot: ChatBot) => {
     try {
+        console.log('[ChatBots] Selecting bot:', bot);
         selectedBot.value = bot;
         // Если у бота уже есть сообщения, используем их
         if (bot.messages) {
             botStore.messages = bot.messages;
+            console.log('[ChatBots] Using cached messages for bot:', bot.chat_id, 'count:', bot.messages.length);
         } else {
             // Загружаем бота с сообщениями с сервера
+            console.log('[ChatBots] Fetching full bot with messages for:', bot.chat_id);
             const fullBot = await botStore.fetchChatBot(bot.chat_id);
             selectedBot.value = fullBot;
+            console.log('[ChatBots] Full bot loaded:', {
+                chat_id: fullBot.chat_id,
+                messagesCount: fullBot.messages?.length ?? 0,
+            });
         }
     } catch (err) {
-        console.error('Failed to load bot messages:', err);
+        console.error('[ChatBots] Failed to load bot messages:', err);
     }
 };
+
+// Polling for messages of selected bot
+const pollTimer = ref<number | null>(null);
+
+watch(
+    () => selectedBot.value?.chat_id,
+    async (chatId) => {
+        // Clear previous timer
+        if (pollTimer.value) {
+            clearInterval(pollTimer.value);
+            pollTimer.value = null;
+        }
+        if (!chatId) return;
+
+        // Immediate refresh once on select
+        try {
+            console.log('[ChatBots] Initial refresh messages for:', chatId);
+            const fullBot = await botStore.fetchChatBot(chatId);
+            selectedBot.value = fullBot;
+        } catch (e) {
+            console.error('[ChatBots] Initial refresh failed:', e);
+        }
+
+        // Start polling every 5s
+        pollTimer.value = window.setInterval(async () => {
+            try {
+                const id = selectedBot.value?.chat_id;
+                if (!id) return;
+                const fullBot = await botStore.fetchChatBot(id);
+                // keep same selectedBot reference fresh
+                selectedBot.value = fullBot;
+            } catch (e) {
+                // swallow errors to keep polling
+            }
+        }, 5000);
+    }
+);
+
+onBeforeUnmount(() => {
+    if (pollTimer.value) {
+        clearInterval(pollTimer.value);
+        pollTimer.value = null;
+    }
+});
 
 // Handle delete bot
 const deleteBot = async (bot: ChatBot) => {
     if (confirm(`Вы уверены, что хотите остановить бота "${bot.chat_id}"?`)) {
+        console.log('[ChatBots] Stopping bot:', bot.chat_id);
         await botStore.deleteChatBot(bot.chat_id);
         if (selectedBot.value?.chat_id === bot.chat_id) {
             selectedBot.value = null;
         }
+        console.log('[ChatBots] Bot stopped:', bot.chat_id);
     }
 };
 
@@ -80,12 +139,13 @@ const createBot = async () => {
             ...newBotForm.value,
             chat_id: formatChatId(newBotForm.value.chat_id),
         };
-        
+        console.log('[ChatBots] Creating bot with data:', formattedData);
         await botStore.createChatBot(formattedData);
+        console.log('[ChatBots] Bot created successfully:', formattedData.chat_id);
         showCreateBotModal.value = false;
         newBotForm.value = { chat_id: '', object_id: 0, bot_config_id: undefined };
     } catch (err) {
-        console.error('Failed to create bot:', err);
+        console.error('[ChatBots] Failed to create bot:', err);
     }
 };
 
@@ -93,16 +153,20 @@ const createBot = async () => {
 const toggleBot = async (bot: ChatBot) => {
     try {
         if (bot.status === 'running') {
+            console.log('[ChatBots] Toggling bot to stop:', bot.chat_id);
             await botStore.deleteChatBot(bot.chat_id);
+            console.log('[ChatBots] Bot stopped via toggle:', bot.chat_id);
         } else {
+            console.log('[ChatBots] Toggling bot to start:', bot.chat_id);
             await botStore.createChatBot({
                 chat_id: bot.chat_id,
                 object_id: bot.object_id,
                 bot_config_id: bot.bot_config_id,
             });
+            console.log('[ChatBots] Bot started via toggle:', bot.chat_id);
         }
     } catch (err) {
-        console.error('Failed to toggle bot:', err);
+        console.error('[ChatBots] Failed to toggle bot:', err);
     }
 };
 
@@ -110,9 +174,11 @@ const toggleBot = async (bot: ChatBot) => {
 const stopAllBots = async () => {
     if (confirm('Остановить всех ботов?')) {
         try {
+            console.log('[ChatBots] Stopping all bots...');
             await botStore.stopAllBots();
+            console.log('[ChatBots] All bots stopped');
         } catch (err) {
-            console.error('Failed to stop all bots:', err);
+            console.error('[ChatBots] Failed to stop all bots:', err);
         }
     }
 };
@@ -124,11 +190,41 @@ const sendMessage = async (content: string) => {
     try {
         // Отправляем сообщение напрямую в чат с ботом
         // await botStore.sendMessage(selectedBot.value.id, content);
-        console.log('Sending message to bot:', selectedBot.value.id, content);
+        console.log('[ChatBots] Sending message', {
+            to: selectedBot.value.chat_id,
+            content,
+        });
+        // Локально добавим в ленту, чтобы UI сразу отобразил
+        botStore.messages.push({
+            id: Date.now(),
+            dialog_id: (botStore as any).currentChatBot?.dialog_id,
+            role: 'user',
+            content,
+            tokens_in: null as any,
+            tokens_out: null as any,
+            meta: {},
+            created_at: new Date().toISOString(),
+        } as any);
     } catch (err) {
-        console.error('Failed to send message:', err);
+        console.error('[ChatBots] Failed to send message:', err);
     }
 };
+
+// Watch for incoming/updated messages to log what we receive
+watch(
+    () => botStore.messages,
+    (newMessages, oldMessages) => {
+        const oldCount = Array.isArray(oldMessages) ? oldMessages.length : 0;
+        const newCount = Array.isArray(newMessages) ? newMessages.length : 0;
+        console.log('[ChatBots] Messages updated', {
+            chat_id: selectedBot.value?.chat_id,
+            oldCount,
+            newCount,
+            lastMessage: newCount > 0 ? newMessages[newCount - 1] : null,
+        });
+    },
+    { deep: true }
+);
 </script>
 
 <template>

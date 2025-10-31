@@ -24,6 +24,7 @@ Route::prefix('auth')->group(function () {
 
 // Публичный вебхук от Green API (без аутентификации)
 Route::post('/greenapi/webhook', [GreenApiWebhookController::class, 'handle']);
+Route::get('/greenapi/last', [GreenApiWebhookController::class, 'last']);
 
 // Защищенные маршруты (требуют авторизации)
 Route::middleware('auth:sanctum')->group(function () {

@@ -3,7 +3,7 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-use Illuminate\Support\Facades\Schedule;
+use Illuminate\Console\Scheduling\Schedule;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -16,8 +16,8 @@ return Application::configure(basePath: dirname(__DIR__))
         //
     })
     ->withSchedule(function (Schedule $schedule): void {
-        // Run bot message processor every 5 seconds
-        $schedule->job(\App\Jobs\ProcessActiveBotsMessages::class)->everyFiveSeconds();
+        // Опрос входящих сообщений GREEN-API каждые 10 секунд (работает с schedule:work)
+        $schedule->command('greenapi:poll --minutes=1')->everyTenSeconds();
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

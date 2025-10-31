@@ -59,24 +59,49 @@ class GreenApiService
         $url = "{$this->baseUrl}/waInstance{$this->idInstance}/lastIncomingMessages/{$this->apiToken}";
 
         try {
-            $response = Http::get($url, [
-                'minutes' => $minutes,
-            ]);
+            // Нормализуем параметр minutes в допустимые рамки [1..60]
+            $minutes = max(1, min(60, (int) $minutes));
 
-            if ($response->successful()) {
-                $data = $response->json();
-                return is_array($data) ? $data : [];
+            $response = Http::acceptJson()
+                ->timeout(10)
+                ->retry(2, 200)
+                ->get($url, [
+                    'minutes' => $minutes,
+                ]);
+
+            if (!$response->successful()) {
+                Log::error('GreenAPI getLastIncomingMessages failed', [
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                    'url' => $url,
+                    'minutes' => $minutes,
+                ]);
+                return [];
             }
 
-            Log::error('GreenAPI getLastIncomingMessages failed', [
-                'status' => $response->status(),
-                'body' => $response->body(),
-            ]);
+            $data = $response->json();
 
+            // Вариант 1: API возвращает массив сообщений
+            if (is_array($data) && array_is_list($data)) {
+                return $data;
+            }
+
+            // Вариант 2: API возвращает объект с ключом messages
+            if (is_array($data) && isset($data['messages']) && is_array($data['messages'])) {
+                return $data['messages'];
+            }
+
+            Log::warning('GreenAPI getLastIncomingMessages: unexpected response structure', [
+                'parsed' => $data,
+                'url' => $url,
+                'minutes' => $minutes,
+            ]);
             return [];
         } catch (\Exception $e) {
             Log::error('GreenAPI getLastIncomingMessages error', [
                 'error' => $e->getMessage(),
+                'url' => $url,
+                'minutes' => $minutes,
             ]);
             return [];
         }

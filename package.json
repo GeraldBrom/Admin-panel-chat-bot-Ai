@@ -5,7 +5,8 @@
     "scripts": {
         "build": "vite build",
         "dev": "vite",
-        "type-check": "vue-tsc --noEmit"
+        "type-check": "vue-tsc --noEmit",
+        "clearAll": "php artisan optimize && php artisan cache:clear && php artisan route:clear &&  php artisan config:clear"
     },
     "devDependencies": {
         "@types/node": "^24.9.2",

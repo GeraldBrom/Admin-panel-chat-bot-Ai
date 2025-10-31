@@ -32,10 +32,14 @@ class DialogService
     {
         Log::info("Initializing dialog for chatId: {$chatId}, objectId: {$objectId}, configId: {$botConfigId}");
 
-        // Конфигурация выбирается явно при старте; активной по умолчанию больше нет
+        // Конфигурация: если явно не передана, используем последнюю для whatsapp
         $config = $botConfigId ? BotConfig::find($botConfigId) : null;
+        if (!$config) {
+            $config = BotConfig::forPlatform('whatsapp')->orderByDesc('id')->first();
+            $botConfigId = $config?->id;
+        }
 
-        // Get or create bot session
+        // Get or create bot session; если уже была сессия, принудительно переводим в running
         $session = BotSession::firstOrCreate(
             [
                 'chat_id' => $chatId,
@@ -49,6 +53,16 @@ class DialogService
                 'started_at' => now(),
             ]
         );
+
+        // Обновляем статус и основные поля при повторном запуске
+        $session->update([
+            'object_id' => $objectId,
+            'bot_config_id' => $botConfigId,
+            'status' => 'running',
+            'dialog_state' => ['state' => self::STATE_INITIAL],
+            'started_at' => $session->started_at ?: now(),
+            'stopped_at' => null,
+        ]);
 
         // Get or create dialog
         $dialog = Dialog::getOrCreate($chatId);
@@ -65,22 +79,34 @@ class DialogService
         $rawName = $objectData['ownerInfo'][0]['value'] ?? 'Клиент';
         $cleanedName = $this->openAIService->cleanOwnerName($rawName);
 
-        // Send greeting
-        $greeting = "{$cleanedName}, добрый день!";
-        $this->sendMessageWithDelay($chatId, $greeting, 0);
+        // Prepare variables for templates
+        $vars = [
+            'name' => $cleanedName,
+            'owner_name' => $cleanedName,
+            'formattedAddDate' => $objectData['formattedAddDate'] ?? '',
+            'objectCount' => $objectData['objectCount'] ?? '',
+            'address' => $objectData['objectInfo'][0]['address'] ?? '',
+        ];
 
-        // Send initial question
+        // Messages from config
+        $messages = $this->getConfigMessages($config);
+
+        // Send greeting
+        $greetingTpl = $messages['greeting'] ?? '{name}, добрый день!';
+        $this->sendMessageWithDelay($chatId, $this->renderTemplate($greetingTpl, $vars), 0);
+
+        // Send initial question (two variants)
         if (empty($objectData['objectCount']) || $objectData['objectCount'] === 'ноль') {
-            $initialQuestion = "Я — ИИ (искусственный интеллект) компании Capital Mars. " .
-                "Мы работали с вами {$objectData['formattedAddDate']}. " .
-                "Видим, вы ее снова сдаете — верно? Если да, можем подключиться к сдаче вашей квартиры?";
+            $initialTpl = $messages['initial_question_no_deals'] ?? (
+                'Я — ИИ компании Capital Mars. Мы работали с вами {formattedAddDate}. Видим, вы ее снова сдаете — верно? Если да, можем подключиться к сдаче вашей квартиры?'
+            );
         } else {
-            $initialQuestion = "Я — ИИ (искусственный интеллект) компании Capital Mars. " .
-                "Мы уже {$objectData['objectCount']} сдавали вашу квартиру на {$objectData['objectInfo'][0]['address']}. " .
-                "{$cleanedName}, вы ее снова сдаете — верно? Если да, можем подключиться к сдаче вашей квартиры?";
+            $initialTpl = $messages['initial_question_with_deals'] ?? (
+                'Я — ИИ компании Capital Mars. Мы уже {objectCount} сдавали вашу квартиру на {address}. {name}, вы ее снова сдаете — верно? Если да, можем подключиться к сдаче вашей квартиры?'
+            );
         }
 
-        $this->sendMessageWithDelay($chatId, $initialQuestion, 2000);
+        $this->sendMessageWithDelay($chatId, $this->renderTemplate($initialTpl, $vars), 2000);
 
         // Update session state
         $session->update([
@@ -155,7 +181,11 @@ class DialogService
      */
     private function handleInitialQuestionResponse(string $chatId, string $messageText, BotSession $session, Dialog $dialog): void
     {
-        $isPositive = $this->openAIService->analyzeResponse($messageText);
+        $config = $session->bot_config_id ? BotConfig::find($session->bot_config_id) : null;
+        $prompts = $this->getConfigPrompts($config);
+        $temperature = $config?->temperature ? (float) $config->temperature : null;
+        $maxTokens = $config?->max_tokens;
+        $isPositive = $this->openAIService->analyzeResponse($messageText, $prompts['analyze_response'] ?? null, $temperature, $maxTokens);
 
         if ($isPositive === null) {
             Log::info("Neutral response on initial question, waiting...");
@@ -164,18 +194,19 @@ class DialogService
 
         if ($isPositive) {
             $objectData = $this->remoteDbService->getObjectData($session->object_id);
-            $price = $objectData['formattedPrice'] ?? '0';
-            
-            $this->sendMessageWithDelay(
-                $chatId,
-                "Хорошо, спасибо за доверие. Пару моментов для актуализации информации. Стоимость квартиры {$price} руб (с коммуналкой, но счетчики отдельно), верно?",
-                2000
-            );
+            $messages = $this->getConfigMessages($config);
+            $vars = [
+                'price' => $objectData['formattedPrice'] ?? '0',
+            ];
+            $tpl = $messages['price_confirmation_positive'] ?? 'Хорошо, спасибо за доверие. Пару моментов для актуализации информации. Стоимость квартиры {price} руб (с коммуналкой, но счетчики отдельно), верно?';
+            $this->sendMessageWithDelay($chatId, $this->renderTemplate($tpl, $vars), 2000);
 
             $session->update(['dialog_state' => ['state' => self::STATE_PRICE_CONFIRMATION]]);
             $dialog->update(['current_state' => self::STATE_PRICE_CONFIRMATION]);
         } else {
-            $this->sendMessageWithDelay($chatId, 'Я вас понял, извините за беспокойство.');
+            $messages = $this->getConfigMessages($config);
+            $tpl = $messages['final_negative'] ?? 'Я вас понял, извините за беспокойство.';
+            $this->sendMessageWithDelay($chatId, $tpl);
             $this->completeDialog($chatId, $session, $dialog);
         }
     }
@@ -185,7 +216,11 @@ class DialogService
      */
     private function handlePriceConfirmationResponse(string $chatId, string $messageText, BotSession $session, Dialog $dialog): void
     {
-        $isPositive = $this->openAIService->analyzeResponse($messageText);
+        $config = $session->bot_config_id ? BotConfig::find($session->bot_config_id) : null;
+        $prompts = $this->getConfigPrompts($config);
+        $temperature = $config?->temperature ? (float) $config->temperature : null;
+        $maxTokens = $config?->max_tokens;
+        $isPositive = $this->openAIService->analyzeResponse($messageText, $prompts['analyze_response'] ?? null, $temperature, $maxTokens);
 
         if ($isPositive === null) {
             return;
@@ -193,18 +228,19 @@ class DialogService
 
         if ($isPositive) {
             $objectData = $this->remoteDbService->getObjectData($session->object_id);
-            $commission = $objectData['objectInfo'][0]['commission_client'] ?? '0';
-
-            $this->sendMessageWithDelay(
-                $chatId,
-                "На всякий случай проговариваю, что наша комиссия по факту заселения жильцов оплачиваемая вами {$commission}% (как и при прошлом сотрудничестве). Тогда мы запускаем в рекламу, как будут первые звонки сразу свяжемся с вами.",
-                2000
-            );
+            $messages = $this->getConfigMessages($config);
+            $vars = [
+                'commission' => $objectData['objectInfo'][0]['commission_client'] ?? '0',
+            ];
+            $tpl = $messages['commission_info_positive'] ?? 'На всякий случай проговариваю, что наша комиссия по факту заселения жильцов оплачиваемая вами {commission}% (как и при прошлом сотрудничестве). Тогда мы запускаем в рекламу, как будут первые звонки сразу свяжемся с вами.';
+            $this->sendMessageWithDelay($chatId, $this->renderTemplate($tpl, $vars), 2000);
 
             $session->update(['dialog_state' => ['state' => self::STATE_COMMISSION_INFO]]);
             $dialog->update(['current_state' => self::STATE_COMMISSION_INFO]);
         } else {
-            $this->sendMessageWithDelay($chatId, 'Понял вас. Подскажите, пожалуйста, какая цена актуальна на данный момент?');
+            $messages = $this->getConfigMessages($config);
+            $tpl = $messages['price_confirmation_negative'] ?? 'Понял вас. Подскажите, пожалуйста, какая цена актуальна на данный момент?';
+            $this->sendMessageWithDelay($chatId, $tpl);
             $session->update(['dialog_state' => ['state' => self::STATE_PRICE_UPDATE]]);
             $dialog->update(['current_state' => self::STATE_PRICE_UPDATE]);
         }
@@ -216,7 +252,10 @@ class DialogService
     private function handlePriceUpdateResponse(string $chatId, string $messageText, BotSession $session, Dialog $dialog): void
     {
         if ($this->containsNegativeIntent($messageText)) {
-            $this->sendMessageWithDelay($chatId, 'Понял вас. Спасибо за ваше время, если что-то изменится — будем рады сотрудничеству.');
+            $config = $session->bot_config_id ? BotConfig::find($session->bot_config_id) : null;
+            $messages = $this->getConfigMessages($config);
+            $tpl = $messages['final_negative'] ?? 'Понял вас. Спасибо за ваше время, если что-то изменится — будем рады сотрудничеству.';
+            $this->sendMessageWithDelay($chatId, $tpl);
             $this->completeDialog($chatId, $session, $dialog);
             return;
         }
@@ -224,7 +263,10 @@ class DialogService
         $price = $this->extractPriceFromText($messageText);
         
         if (!$price) {
-            $this->sendMessageWithDelay($chatId, 'Понял вас. Подскажите, пожалуйста, актуальную цену числом (например, 95000 руб)?');
+            $config = $session->bot_config_id ? BotConfig::find($session->bot_config_id) : null;
+            $messages = $this->getConfigMessages($config);
+            $tpl = $messages['price_update_invalid'] ?? 'Понял вас. Подскажите, пожалуйста, актуальную цену числом (например, 95000 руб)?';
+            $this->sendMessageWithDelay($chatId, $tpl);
             return;
         }
 
@@ -232,11 +274,10 @@ class DialogService
         $commission = $objectData['objectInfo'][0]['commission_client'] ?? '0';
         $formattedPrice = number_format((int) $price, 0, ',', ',');
 
-        $this->sendMessageWithDelay(
-            $chatId,
-            "Понял вас, цена {$formattedPrice} руб. На всякий случай проговариваю, что наша комиссия по факту заселения жильцов оплачиваемая вами {$commission}% (как и при прошлом сотрудничестве). Тогда мы запускаем в рекламу, как будут первые звонки сразу свяжемся с вами.",
-            2000
-        );
+        $config = $session->bot_config_id ? BotConfig::find($session->bot_config_id) : null;
+        $messages = $this->getConfigMessages($config);
+        $tpl = $messages['price_update_success'] ?? 'Понял вас, цена {price} руб. На всякий случай проговариваю, что наша комиссия по факту заселения жильцов оплачиваемая вами {commission}% (как и при прошлом сотрудничестве). Тогда мы запускаем в рекламу, как будут первые звонки сразу свяжемся с вами.';
+        $this->sendMessageWithDelay($chatId, $this->renderTemplate($tpl, [ 'price' => $formattedPrice, 'commission' => $commission ]), 2000);
 
         $session->update(['dialog_state' => ['state' => self::STATE_COMMISSION_INFO]]);
         $dialog->update(['current_state' => self::STATE_COMMISSION_INFO]);
@@ -247,20 +288,24 @@ class DialogService
      */
     private function handleCommissionInfoResponse(string $chatId, string $messageText, BotSession $session, Dialog $dialog): void
     {
-        $isPositive = $this->openAIService->analyzeResponse($messageText);
+        $config = $session->bot_config_id ? BotConfig::find($session->bot_config_id) : null;
+        $prompts = $this->getConfigPrompts($config);
+        $temperature = $config?->temperature ? (float) $config->temperature : null;
+        $maxTokens = $config?->max_tokens;
+        $isPositive = $this->openAIService->analyzeResponse($messageText, $prompts['analyze_response'] ?? null, $temperature, $maxTokens);
 
         if ($isPositive === null) {
             return;
         }
 
         if ($isPositive) {
-            $this->sendMessageWithDelay(
-                $chatId,
-                'Отлично! Благодарим за доверие. Мы свяжемся с вами, как только появятся первые заинтересованные клиенты. Хорошего дня!',
-                2000
-            );
+            $messages = $this->getConfigMessages($config);
+            $tpl = $messages['final_success'] ?? 'Отлично! Благодарим за доверие. Мы свяжемся с вами, как только появятся первые заинтересованные клиенты. Хорошего дня!';
+            $this->sendMessageWithDelay($chatId, $tpl, 2000);
         } else {
-            $this->sendMessageWithDelay($chatId, 'Понял вас. Спасибо за ваше время, если что-то изменится — будем рады сотрудничеству.');
+            $messages = $this->getConfigMessages($config);
+            $tpl = $messages['final_negative'] ?? 'Понял вас. Спасибо за ваше время, если что-то изменится — будем рады сотрудничеству.';
+            $this->sendMessageWithDelay($chatId, $tpl);
         }
 
         $this->completeDialog($chatId, $session, $dialog);
@@ -324,10 +369,10 @@ class DialogService
      */
     private function handleNegativeIntent(string $chatId, Dialog $dialog, BotSession $session): void
     {
-        $this->sendMessageWithDelay(
-            $chatId,
-            'Понял вас. Спасибо за ваше время, если что-то изменится — будем рады сотрудничеству.'
-        );
+        $config = $session->bot_config_id ? BotConfig::find($session->bot_config_id) : null;
+        $messages = $this->getConfigMessages($config);
+        $tpl = $messages['final_negative'] ?? 'Понял вас. Спасибо за ваше время, если что-то изменится — будем рады сотрудничеству.';
+        $this->sendMessageWithDelay($chatId, $tpl);
 
         $this->completeDialog($chatId, $session, $dialog);
     }
@@ -389,6 +434,42 @@ class DialogService
                 'error' => $e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * Get messages config as array
+     */
+    private function getConfigMessages(?BotConfig $config): array
+    {
+        if (!$config || !is_array($config->settings ?? null)) {
+            return [];
+        }
+        $settings = $config->settings;
+        return is_array($settings['messages'] ?? null) ? $settings['messages'] : [];
+    }
+
+    /**
+     * Get prompts config as array
+     */
+    private function getConfigPrompts(?BotConfig $config): array
+    {
+        if (!$config || !is_array($config->settings ?? null)) {
+            return [];
+        }
+        $settings = $config->settings;
+        return is_array($settings['prompts'] ?? null) ? $settings['prompts'] : [];
+    }
+
+    /**
+     * Render {placeholders} in template with provided vars
+     */
+    private function renderTemplate(string $template, array $vars): string
+    {
+        $result = $template;
+        foreach ($vars as $key => $value) {
+            $result = str_replace('{' . $key . '}', (string) $value, $result);
+        }
+        return $result;
     }
 }
 

@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Services\DialogService;
+use App\Services\GreenApiService;
+use App\Jobs\ProcessGreenApiWebhook;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -19,39 +21,28 @@ class GreenApiWebhookController extends Controller
             'typeWebhook' => $payload['typeWebhook'] ?? null,
         ]);
 
-        $processed = 0;
-
-        // Вариант 1: массив сообщений
-        if (isset($payload['messages']) && is_array($payload['messages'])) {
-            foreach ($payload['messages'] as $message) {
-                $normalized = $this->normalizeMessage($message);
-                if (!$normalized) {
-                    continue;
-                }
-                app(DialogService::class)->processIncomingMessage(
-                    $normalized['chatId'],
-                    $normalized['messageText'],
-                    $normalized['meta']
-                );
-                $processed++;
-            }
-        } else {
-            // Вариант 2: одиночное уведомление (ReceiveNotification)
-            $message = $payload['message'] ?? $payload['body'] ?? $payload;
-            $normalized = $this->normalizeMessage($message);
-            if ($normalized) {
-                app(DialogService::class)->processIncomingMessage(
-                    $normalized['chatId'],
-                    $normalized['messageText'],
-                    $normalized['meta']
-                );
-                $processed++;
-            }
-        }
+        // Асинхронная обработка после ответа (не блокируем 200 OK)
+        ProcessGreenApiWebhook::dispatchAfterResponse($payload);
 
         return response()->json([
             'status' => 'ok',
-            'processed' => $processed,
+            'queued' => true,
+        ]);
+    }
+
+    /**
+     * Диагностический метод: получить последние входящие сообщения из GREEN-API
+     */
+    public function last(Request $request, GreenApiService $greenApiService): JsonResponse
+    {
+        $minutes = (int) ($request->query('minutes', 3));
+        $minutes = $minutes > 0 ? $minutes : 1;
+        $messages = $greenApiService->getLastIncomingMessages($minutes);
+
+        return response()->json([
+            'minutes' => $minutes,
+            'count' => is_array($messages) ? count($messages) : 0,
+            'sample' => array_slice($messages, 0, 3),
         ]);
     }
 

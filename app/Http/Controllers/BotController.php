@@ -62,13 +62,14 @@ class BotController extends Controller
                 $request->bot_config_id
             );
 
+            // Пытаемся получить созданную/запущенную сессию, но не падаем, если её нет
+            $session = BotSession::where('chat_id', $request->chat_id)
+                ->orderBy('created_at', 'desc')
+                ->first();
+
             return response()->json([
                 'message' => 'Bot started successfully',
-                'data' => new BotSessionResource(
-                    BotSession::where('chat_id', $request->chat_id)
-                        ->where('status', 'running')
-                        ->first()
-                ),
+                'data' => $session ? new BotSessionResource($session) : null,
             ]);
         } catch (\Exception $e) {
             Log::error('Failed to start bot', [
