@@ -16,8 +16,8 @@ return Application::configure(basePath: dirname(__DIR__))
         //
     })
     ->withSchedule(function (Schedule $schedule): void {
-        // Опрос входящих сообщений GREEN-API каждые 10 секунд (работает с schedule:work)
-        $schedule->command('greenapi:poll --minutes=1')->everyTenSeconds();
+        // Webhook настроен, polling отключен
+        // $schedule->command('greenapi:poll --minutes=1')->everyTenSeconds();
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
