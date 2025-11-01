@@ -35,9 +35,11 @@ class GreenApiService
                         CURLOPT_TCP_KEEPALIVE => 1,
                         CURLOPT_TCP_KEEPIDLE => 120,
                         CURLOPT_TCP_KEEPINTVL => 60,
-                        CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4, // Использовать только IPv4
-                        CURLOPT_DNS_USE_GLOBAL_CACHE => false, // Отключить глобальный DNS кэш
-                        CURLOPT_NOSIGNAL => 1, // Избежать проблем с потоками
+                        CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,
+                        CURLOPT_DNS_USE_GLOBAL_CACHE => false,
+                        CURLOPT_NOSIGNAL => 1,
+                        // Прямой резолв DNS чтобы избежать getaddrinfo() thread ошибки
+                        CURLOPT_RESOLVE => ['1105.api.green-api.com:443:130.193.35.181'],
                     ],
                 ])
                 ->post($url, [
@@ -87,6 +89,7 @@ class GreenApiService
                         CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,
                         CURLOPT_DNS_USE_GLOBAL_CACHE => false,
                         CURLOPT_NOSIGNAL => 1,
+                        CURLOPT_RESOLVE => ['1105.api.green-api.com:443:130.193.35.181'],
                     ],
                 ])
                 ->get($url, [
@@ -148,6 +151,7 @@ class GreenApiService
                         CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,
                         CURLOPT_DNS_USE_GLOBAL_CACHE => false,
                         CURLOPT_NOSIGNAL => 1,
+                        CURLOPT_RESOLVE => ['1105.api.green-api.com:443:130.193.35.181'],
                     ],
                 ])
                 ->get($url);
@@ -189,6 +193,7 @@ class GreenApiService
                         CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,
                         CURLOPT_DNS_USE_GLOBAL_CACHE => false,
                         CURLOPT_NOSIGNAL => 1,
+                        CURLOPT_RESOLVE => ['1105.api.green-api.com:443:130.193.35.181'],
                     ],
                 ])
                 ->delete($url);

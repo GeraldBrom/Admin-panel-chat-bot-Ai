@@ -13,10 +13,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // Для API запросов возвращаем JSON вместо редиректа
-        $middleware->redirectGuestsTo(fn () => response()->json([
-            'message' => 'Unauthenticated.'
-        ], 401));
+        //
     })
     ->withSchedule(function (Schedule $schedule): void {
         // Polling для локальной разработки (на продакшене используется webhook)
@@ -24,5 +21,12 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('greenapi:poll --minutes=1')->everyTenSeconds();
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // Обработка неавторизованных запросов для API
+        $exceptions->renderable(function (\Illuminate\Auth\AuthenticationException $e, $request) {
+            if ($request->expectsJson() || $request->is('api/*')) {
+                return response()->json([
+                    'message' => 'Unauthenticated.'
+                ], 401);
+            }
+        });
     })->create();

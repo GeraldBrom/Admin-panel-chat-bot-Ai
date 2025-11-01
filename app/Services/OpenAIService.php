@@ -219,6 +219,7 @@ class OpenAIService
 
         $options = [
             'timeout' => 60, // 60 секунд таймаут для медленных запросов
+            'connect_timeout' => 10, // Таймаут подключения
             'curl' => [
                 CURLOPT_DNS_CACHE_TIMEOUT => 300,
                 CURLOPT_TCP_KEEPALIVE => 1,
@@ -227,7 +228,8 @@ class OpenAIService
                 CURLOPT_FRESH_CONNECT => false, // Использовать пул соединений
                 CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4, // Использовать только IPv4
                 CURLOPT_DNS_USE_GLOBAL_CACHE => false, // Отключить глобальный DNS кэш
-                CURLOPT_NOSIGNAL => 1, // Избежать проблем с потоками
+                CURLOPT_NOSIGNAL => 1, // Избежать проблем с потоками (КРИТИЧНО!)
+                CURLOPT_FORBID_REUSE => 0, // Разрешить переиспользование соединений
             ],
         ];
 
