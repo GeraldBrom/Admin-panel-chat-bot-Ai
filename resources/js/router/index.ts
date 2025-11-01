@@ -6,6 +6,7 @@ const Login = () => import('@/views/Login.vue');
 const Dashboard = () => import('@/views/Dashboard.vue');
 const ChatBots = () => import('@/views/ChatBots.vue');
 const BotManagement = () => import('@/views/BotManagement.vue');
+const Logs = () => import('@/views/Logs.vue');
 
 const routes: RouteRecordRaw[] = [
     {
@@ -46,6 +47,15 @@ const routes: RouteRecordRaw[] = [
         meta: { 
             requiresAuth: true,
             title: 'Управление чат ботами',
+        },
+    },
+    {
+        path: '/logs',
+        name: 'logs',
+        component: Logs,
+        meta: { 
+            requiresAuth: true,
+            title: 'Логи системы',
         },
     },
     {

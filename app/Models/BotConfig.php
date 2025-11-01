@@ -18,6 +18,10 @@ class BotConfig extends Model
         'max_tokens',
         'vector_store_id_main',
         'vector_store_id_objections',
+        'kickoff_message',
+        'vector_stores',
+        'openai_model',
+        'openai_service_tier',
         'settings',
     ];
 
@@ -26,6 +30,10 @@ class BotConfig extends Model
         'max_tokens' => 'integer',
         'vector_store_id_main' => 'string',
         'vector_store_id_objections' => 'string',
+        'kickoff_message' => 'string',
+        'vector_stores' => 'array',
+        'openai_model' => 'string',
+        'openai_service_tier' => 'string',
         'settings' => 'array',
     ];
 

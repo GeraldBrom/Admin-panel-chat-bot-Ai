@@ -59,7 +59,17 @@ export const useBotStore = defineStore('bot', () => {
             loading.value = true;
             error.value = null;
             const newBot = await botService.startBot(data);
+            
+            // Проверяем, нет ли уже бота с таким chat_id
+            const existingIndex = chatBots.value.findIndex(bot => bot.chat_id === newBot.chat_id);
+            if (existingIndex !== -1) {
+                // Обновляем существующего бота
+                chatBots.value[existingIndex] = newBot;
+            } else {
+                // Добавляем нового бота
             chatBots.value.push(newBot);
+            }
+            
             return newBot;
         } catch (err: any) {
             error.value = err.response?.data?.message || 'Ошибка создания чат-бота';
@@ -94,13 +104,19 @@ export const useBotStore = defineStore('bot', () => {
         try {
             loading.value = true;
             error.value = null;
-            await botService.stopBot(chatId);
-            chatBots.value = chatBots.value.filter(bot => bot.chat_id !== chatId);
+            const stoppedBot = await botService.stopBot(chatId);
+            
+            // Обновляем статус бота вместо удаления
+            const index = chatBots.value.findIndex(bot => bot.chat_id === chatId);
+            if (index !== -1) {
+                chatBots.value[index] = stoppedBot;
+            }
+            
             if (currentChatBot.value?.chat_id === chatId) {
-                currentChatBot.value = null;
+                currentChatBot.value = stoppedBot;
             }
         } catch (err: any) {
-            error.value = err.response?.data?.message || 'Ошибка удаления чат-бота';
+            error.value = err.response?.data?.message || 'Ошибка остановки чат-бота';
             throw err;
         } finally {
             loading.value = false;
@@ -112,8 +128,19 @@ export const useBotStore = defineStore('bot', () => {
             loading.value = true;
             error.value = null;
             await botService.stopAllBots();
-            chatBots.value = [];
-            currentChatBot.value = null;
+            
+            // Обновляем статус всех ботов на stopped
+            chatBots.value = chatBots.value.map(bot => ({
+                ...bot,
+                status: 'stopped' as const,
+            }));
+            
+            if (currentChatBot.value) {
+                currentChatBot.value = {
+                    ...currentChatBot.value,
+                    status: 'stopped' as const,
+                };
+            }
         } catch (err: any) {
             error.value = err.response?.data?.message || 'Ошибка остановки ботов';
             throw err;

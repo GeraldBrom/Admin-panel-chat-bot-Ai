@@ -97,57 +97,42 @@ class DialogService
 
         Log::info("Dialog initialized for chatId: {$chatId}");
 
-        // Generate and send the first assistant message via single LLM call
+        // Send kickoff message directly to client (without GPT processing)
         try {
             $config = $botConfigId ? BotConfig::find($botConfigId) : null;
-            $systemPrompt = $config?->prompt ?? 'Ты - профессионал ИИ-ассистент компании Capital Mars. Отвечай кратко, по делу.';
-            $temperature = $config?->temperature ? (float) $config->temperature : null;
-            $maxTokens = $config?->max_tokens;
 
-            // Provide context as first user turn to steer the model for initial outreach
-            $kickoffInstruction = "{owner_name_clean}, добрый день!\n\nЯ — ИИ-ассистент Capital Mars. Мы уже {objectCount} сдавали вашу квартиру на {address}. Видим, что объявление снова актуально — верно? Если да, готовы подключиться к сдаче.";
-            $history = [
-                [ 'role' => 'user', 'content' => $this->renderTemplate($kickoffInstruction, $vars) ],
-            ];
+            // Используем kickoff_message из конфигурации или дефолтное значение
+            $kickoffMessage = $config?->kickoff_message 
+                ?? "{owner_name_clean}, добрый день!\n\nЯ — ИИ-ассистент Capital Mars. Мы уже {objectCount} сдавали вашу квартиру на {address}. Видим, что объявление снова актуально — верно? Если да, готовы подключиться к сдаче.";
+            
+            // Render template with variables
+            $renderedMessage = $this->renderTemplate($kickoffMessage, $vars);
 
-            $vectorIds = [];
-            if ($config?->vector_store_id_main) { $vectorIds[] = $config->vector_store_id_main; }
-            if ($config?->vector_store_id_objections) { $vectorIds[] = $config->vector_store_id_objections; }
-
-            if (!empty($vectorIds)) {
-                $result = $this->openAIService->chatWithRag($systemPrompt, $history, $temperature, $maxTokens, $vectorIds);
-            } else {
-                $result = $this->openAIService->chat($systemPrompt, $history, $temperature, $maxTokens);
-            }
-
-            $assistantReply = $result['content'] ?? '';
-            $responseId = $result['response_id'] ?? null;
-            $usage = $result['usage'] ?? ['prompt_tokens' => 0, 'completion_tokens' => 0];
-
-            if ($assistantReply !== '') {
-                Log::info('Initial assistant reply generated', [
-                    'len' => mb_strlen($assistantReply),
-                    'response_id' => $responseId,
-                    'tokens' => $usage,
+            // Send directly to client WITHOUT GPT processing
+            if (!empty(trim($renderedMessage))) {
+                Log::info('Sending kickoff message directly to client', [
+                    'chatId' => $chatId,
+                    'message_length' => mb_strlen($renderedMessage),
                 ]);
-                $this->sendMessageWithDelay($chatId, $assistantReply, 0);
+                
+                $this->sendMessageWithDelay($chatId, $renderedMessage, 0);
 
+                // Save as assistant message (no GPT tokens used)
                 Message::create([
                     'dialog_id' => $dialog->dialog_id,
                     'role' => 'assistant',
-                    'content' => $assistantReply,
-                    'previous_response_id' => $responseId,
-                    'tokens_in' => $usage['prompt_tokens'] ?? 0,
-                    'tokens_out' => $usage['completion_tokens'] ?? 0,
+                    'content' => $renderedMessage,
+                    'previous_response_id' => null,
+                    'tokens_in' => 0,
+                    'tokens_out' => 0,
                 ]);
             } else {
-                Log::warning('Initial assistant reply is empty, using fallback template');
+                Log::warning('Kickoff message is empty after rendering, using fallback');
                 $fallback = $this->renderTemplate(
-                    "{name}, добрый день! Мы ранее работали по вашей квартире на {address}. Подскажите, вы снова её сдаёте? {commission_text}",
+                    "{name}, добрый день! Мы ранее работали по вашей квартире на {address}. Подскажите, вы снова её сдаёте?",
                     [
                         'name' => $vars['name'] ?? 'Добрый день',
                         'address' => $vars['address'] ?? '',
-                        'commission_text' => 'Наша комиссия — 50% по факту заселения (как при прошлом сотрудничестве).',
                     ]
                 );
                 $this->sendMessageWithDelay($chatId, $fallback, 0);
@@ -156,10 +141,12 @@ class DialogService
                     'role' => 'assistant',
                     'content' => $fallback,
                     'previous_response_id' => null,
+                    'tokens_in' => 0,
+                    'tokens_out' => 0,
                 ]);
             }
         } catch (\Exception $e) {
-            Log::error('Failed to send initial assistant message', [ 'error' => $e->getMessage() ]);
+            Log::error('Failed to send kickoff message', [ 'error' => $e->getMessage() ]);
         }
     }
 
@@ -199,6 +186,8 @@ class DialogService
             $systemPrompt = $config?->prompt ?? 'Ты - профессионал ИИ-ассистент компании Capital Mars. Отвечай кратко, по делу.';
             $temperature = $config?->temperature ? (float) $config->temperature : null;
             $maxTokens = $config?->max_tokens;
+            $model = $config?->openai_model ?? 'gpt-5-2025-08-07';
+            $serviceTier = $config?->openai_service_tier ?? 'flex';
 
             $historyMessages = Message::where('dialog_id', $dialog->dialog_id)
                 ->orderBy('created_at')
@@ -211,12 +200,26 @@ class DialogService
                 ];
             })->values()->all();
 
+            // Собираем все vector store IDs (приоритет новому формату)
             $vectorIds = [];
-            if ($config?->vector_store_id_main) {
-                $vectorIds[] = $config->vector_store_id_main;
+            
+            // Сначала добавляем из нового формата vector_stores
+            if ($config && is_array($config->vector_stores)) {
+                foreach ($config->vector_stores as $store) {
+                    if (isset($store['id']) && !empty($store['id'])) {
+                        $vectorIds[] = $store['id'];
+                    }
+                }
             }
-            if ($config?->vector_store_id_objections) {
-                $vectorIds[] = $config->vector_store_id_objections;
+            
+            // Для обратной совместимости: если нет новых, используем старые поля
+            if (empty($vectorIds)) {
+                if ($config?->vector_store_id_main) {
+                    $vectorIds[] = $config->vector_store_id_main;
+                }
+                if ($config?->vector_store_id_objections) {
+                    $vectorIds[] = $config->vector_store_id_objections;
+                }
             }
 
             // Prefer Responses API with RAG if vector stores configured
@@ -227,14 +230,20 @@ class DialogService
                     $history,
                     $temperature,
                     $maxTokens,
-                    $vectorIds
+                    $vectorIds,
+                    $model,
+                    $serviceTier
                 );
             } else {
                 $result = $this->openAIService->chat(
                     $systemPrompt,
                     $history,
                     $temperature,
-                    $maxTokens
+                    $maxTokens,
+                    null,
+                    null,
+                    $model,
+                    $serviceTier
                 );
             }
             $elapsedTime = round((microtime(true) - $startTime) * 1000); // ms

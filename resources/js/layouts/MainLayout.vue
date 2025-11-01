@@ -24,6 +24,7 @@ const handleLogout = async () => {
             <router-link to="/dashboard" active-class="active">Главная</router-link>
             <router-link to="/chat-bots" active-class="active">Чат боты</router-link>
             <router-link to="/bot-management" active-class="active">Управление ботами</router-link>
+            <router-link to="/logs" active-class="active">Логи</router-link>
           </nav>
           
           <div class="header-user">

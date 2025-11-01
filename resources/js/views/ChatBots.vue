@@ -104,9 +104,20 @@ const deleteBot = async (bot: ChatBot) => {
     if (confirm(`Вы уверены, что хотите остановить бота "${bot.chat_id}"?`)) {
         console.log('[ChatBots] Stopping bot:', bot.chat_id);
         await botStore.deleteChatBot(bot.chat_id);
+        
+        // Обновляем список ботов с сервера
+        await botStore.fetchAllChatBots();
+        console.log('[ChatBots] Bot list refreshed after stopping');
+        
+        // Обновляем selectedBot, если это был выбранный бот
         if (selectedBot.value?.chat_id === bot.chat_id) {
-            selectedBot.value = null;
+            // Находим обновленного бота в обновленном списке
+            const updatedBot = botStore.chatBots.find(b => b.chat_id === bot.chat_id);
+            if (updatedBot) {
+                selectedBot.value = updatedBot;
+            }
         }
+        
         console.log('[ChatBots] Bot stopped:', bot.chat_id);
     }
 };
@@ -142,10 +153,17 @@ const createBot = async () => {
         console.log('[ChatBots] Creating bot with data:', formattedData);
         await botStore.createChatBot(formattedData);
         console.log('[ChatBots] Bot created successfully:', formattedData.chat_id);
+        
+        // Закрываем модалку и очищаем форму
         showCreateBotModal.value = false;
         newBotForm.value = { chat_id: '', object_id: 0, bot_config_id: undefined };
+        
+        // Обновляем список ботов с сервера
+        await botStore.fetchAllChatBots();
+        console.log('[ChatBots] Bot list refreshed after creation');
     } catch (err) {
         console.error('[ChatBots] Failed to create bot:', err);
+        alert('Ошибка создания бота: ' + (err as any)?.response?.data?.message || 'Неизвестная ошибка');
     }
 };
 
@@ -165,8 +183,23 @@ const toggleBot = async (bot: ChatBot) => {
             });
             console.log('[ChatBots] Bot started via toggle:', bot.chat_id);
         }
+        
+        // Обновляем список ботов с сервера
+        await botStore.fetchAllChatBots();
+        console.log('[ChatBots] Bot list refreshed after toggle');
+        
+        // Обновляем selectedBot, если это был выбранный бот
+        if (selectedBot.value?.chat_id === bot.chat_id) {
+            const updatedBot = botStore.chatBots.find(b => b.chat_id === bot.chat_id);
+            if (updatedBot) {
+                selectedBot.value = updatedBot;
+            }
+        }
+        
+        console.log('[ChatBots] Bot state updated locally');
     } catch (err) {
         console.error('[ChatBots] Failed to toggle bot:', err);
+        alert('Ошибка изменения статуса бота');
     }
 };
 
@@ -176,6 +209,19 @@ const stopAllBots = async () => {
         try {
             console.log('[ChatBots] Stopping all bots...');
             await botStore.stopAllBots();
+            
+            // Обновляем список ботов с сервера
+            await botStore.fetchAllChatBots();
+            console.log('[ChatBots] Bot list refreshed after stopping all');
+            
+            // Обновляем selectedBot, если он был выбран
+            if (selectedBot.value) {
+                const updatedBot = botStore.chatBots.find(b => b.chat_id === selectedBot.value?.chat_id);
+                if (updatedBot) {
+                    selectedBot.value = updatedBot;
+                }
+            }
+            
             console.log('[ChatBots] All bots stopped');
         } catch (err) {
             console.error('[ChatBots] Failed to stop all bots:', err);
@@ -297,7 +343,7 @@ watch(
       </div>
 
       <!-- Create bot modal -->
-      <div v-if="showCreateBotModal" class="modal-overlay" @click="showCreateBotModal = false">
+      <div v-if="showCreateBotModal" class="modal-overlay" @click.self="showCreateBotModal = false">
         <div class="modal" @click.stop>
           <div class="modal__header">
             <h3>Создать чат-бота</h3>

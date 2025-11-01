@@ -51,11 +51,18 @@ class BotConfigController extends Controller
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'platform' => 'required|string|in:whatsapp',
-            'platform' => 'required|string|in:whatsapp',
             'prompt' => 'required|string',
             'scenario_description' => 'nullable|string',
             'temperature' => 'nullable|numeric|min:0|max:2',
             'max_tokens' => 'nullable|integer|min:1|max:4000',
+            'vector_store_id_main' => 'nullable|string|max:255',
+            'vector_store_id_objections' => 'nullable|string|max:255',
+            'kickoff_message' => 'nullable|string',
+            'vector_stores' => 'nullable|array',
+            'vector_stores.*.name' => 'required|string|max:255',
+            'vector_stores.*.id' => 'required|string|max:255',
+            'openai_model' => 'nullable|string|max:100',
+            'openai_service_tier' => 'nullable|string|in:auto,default,flex',
             'settings' => 'nullable|array',
         ]);
 
@@ -98,6 +105,14 @@ class BotConfigController extends Controller
             'scenario_description' => 'nullable|string',
             'temperature' => 'nullable|numeric|min:0|max:2',
             'max_tokens' => 'nullable|integer|min:1|max:4000',
+            'vector_store_id_main' => 'nullable|string|max:255',
+            'vector_store_id_objections' => 'nullable|string|max:255',
+            'kickoff_message' => 'nullable|string',
+            'vector_stores' => 'nullable|array',
+            'vector_stores.*.name' => 'required|string|max:255',
+            'vector_stores.*.id' => 'required|string|max:255',
+            'openai_model' => 'nullable|string|max:100',
+            'openai_service_tier' => 'nullable|string|in:auto,default,flex',
             'settings' => 'nullable|array',
         ]);
 
@@ -115,6 +130,12 @@ class BotConfigController extends Controller
                 'scenario_description',
                 'temperature',
                 'max_tokens',
+                'vector_store_id_main',
+                'vector_store_id_objections',
+                'kickoff_message',
+                'vector_stores',
+                'openai_model',
+                'openai_service_tier',
                 'settings',
             ]));
 

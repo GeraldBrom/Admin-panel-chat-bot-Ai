@@ -23,19 +23,21 @@ class OpenAIService
     }
 
     /**
-     * Chat using Responses API with File Search (RAG)
-     * Returns array: ['content' => string, 'response_id' => string|null, 'usage' => ['prompt_tokens'=>int,'completion_tokens'=>int]]
+     * Чат с использованием Responses API и File Search (RAG)
+     * Возвращает массив: ['content' => string, 'response_id' => string|null, 'usage' => ['prompt_tokens'=>int,'completion_tokens'=>int]]
      */
     public function chatWithRag(
         string $systemPrompt,
         array $history,
         ?float $temperature = null,
         ?int $maxTokens = null,
-        array $vectorStoreIds = []
+        array $vectorStoreIds = [],
+        ?string $model = null,
+        ?string $serviceTier = null
     ): array {
-        // Build Responses API input
+        
         $input = [];
-        // Augment system prompt with vector store context (API-side attachment may be unavailable)
+        
         if (!empty($vectorStoreIds)) {
             $systemPrompt .= "\n\nИспользуй знания из следующих векторных баз (если доступны на стороне провайдера): " . implode(', ', $vectorStoreIds) . ". Отвечай только фактами, не выдумывай.";
         }
@@ -54,10 +56,10 @@ class OpenAIService
         }
 
         $payload = [
-            'model' => 'gpt-5-2025-08-07',
+            'model' => $model ?? 'gpt-5-2025-08-07',
             'input' => $input,
             'max_output_tokens' => $maxTokens ?? 500,
-            'service_tier' => 'flex',
+            'service_tier' => $serviceTier ?? 'flex',
         ];
 
         if (!empty($vectorStoreIds)) {
@@ -74,7 +76,7 @@ class OpenAIService
                 $responseId = $response->json('id');
                 $rawOutput = $response->json('output') ?? [];
 
-                // Extract text from Responses API structure
+                // Извлекаем текст из структуры Responses API
                 $content = '';
                 $output = $rawOutput;
                 
@@ -134,22 +136,22 @@ class OpenAIService
             Log::warning('OpenAI Responses API timeout/connection error, falling back to chat/completions', [
                 'error' => $e->getMessage()
             ]);
-            return $this->chat($systemPrompt, $history, $temperature, $maxTokens);
+            return $this->chat($systemPrompt, $history, $temperature, $maxTokens, null, null, $model, $serviceTier);
         } catch (\Throwable $e) {
             Log::error('OpenAI chatWithRag exception', [ 'error' => $e->getMessage() ]);
         }
 
-        // Fallback to standard chat completion with the same (augmented) system prompt
-        return $this->chat($systemPrompt, $history, $temperature, $maxTokens);
+        // Фолбэк на стандартный chat completion с тем же (расширенным) системным промптом
+        return $this->chat($systemPrompt, $history, $temperature, $maxTokens, null, null, $model, $serviceTier);
     }
 
     /**
-     * Single chat entrypoint: system prompt + history → assistant reply
-     * Returns array: ['content' => string, 'response_id' => string|null, 'usage' => ['prompt_tokens'=>int,'completion_tokens'=>int]]
+     * Единая точка входа для чата: системный промпт + история → ответ ассистента
+     * Возвращает массив: ['content' => string, 'response_id' => string|null, 'usage' => ['prompt_tokens'=>int,'completion_tokens'=>int]]
      */
-    public function chat(string $systemPrompt, array $history, ?float $temperature = null, ?int $maxTokens = null, ?string $vectorStoreIdMain = null, ?string $vectorStoreIdObjections = null): array
+    public function chat(string $systemPrompt, array $history, ?float $temperature = null, ?int $maxTokens = null, ?string $vectorStoreIdMain = null, ?string $vectorStoreIdObjections = null, ?string $model = null, ?string $serviceTier = null): array
     {
-        // history: [['role' => 'user'|'assistant', 'content' => '...'], ...]
+        // история: [['role' => 'user'|'assistant', 'content' => '...'], ...]
         $messages = [];
         $systemParts = $systemPrompt;
         if ($vectorStoreIdMain || $vectorStoreIdObjections) {
@@ -178,10 +180,10 @@ class OpenAIService
         }
 
         $payload = [
-            'model' => 'gpt-5-2025-08-07',
+            'model' => $model ?? 'gpt-5-2025-08-07',
             'messages' => $messages,
             'max_completion_tokens' => $maxTokens ?? 500,
-            'service_tier' => 'flex',
+            'service_tier' => $serviceTier ?? 'flex',
         ];
         // gpt-5 не поддерживает произвольное значение temperature — используем дефолт (не передаём параметр)
         try {
@@ -229,7 +231,7 @@ class OpenAIService
     }
 
     /**
-     * Get base URL for OpenAI API
+     * Получить базовый URL для OpenAI API
      */
     private function getBaseUrl(): string
     {
@@ -237,7 +239,7 @@ class OpenAIService
     }
 
     /**
-     * Get HTTP client with optional proxy
+     * Получить HTTP-клиент с опциональным прокси
      */
     private function getHttpClient()
     {
@@ -267,7 +269,7 @@ class OpenAIService
             ],
         ];
 
-        // Proxy support via .env (USE_PROXY, PROXY_HOST, PROXY_PORT)
+        // Поддержка прокси через .env (USE_PROXY, PROXY_HOST, PROXY_PORT)
         if ($this->useProxy && $this->proxyHost && $this->proxyPort) {
             $proxyUri = sprintf('socks5://%s:%s', $this->proxyHost, $this->proxyPort);
             $options['proxy'] = $proxyUri;
@@ -275,7 +277,5 @@ class OpenAIService
 
         return $client->withOptions($options);
     }
-
-    // Removed legacy helper methods: cleanOwnerName, analyzeResponse, isObjection, handleObjection
 }
 

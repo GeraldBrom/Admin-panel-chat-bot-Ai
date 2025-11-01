@@ -59,6 +59,11 @@ export interface Message {
     created_at: string;
 }
 
+export interface VectorStore {
+    name: string;
+    id: string;
+}
+
 export interface BotConfig {
     id: number;
     name: string;
@@ -67,7 +72,12 @@ export interface BotConfig {
     scenario_description: string;
     temperature: number;
     max_tokens: number;
-    
+    vector_store_id_main?: string;
+    vector_store_id_objections?: string;
+    kickoff_message?: string;
+    vector_stores?: VectorStore[];
+    openai_model?: string;
+    openai_service_tier?: string;
     settings?: Record<string, any>;
     created_at: string;
     updated_at: string;
@@ -101,7 +111,12 @@ export interface CreateBotConfigData {
     scenario_description: string;
     temperature?: number;
     max_tokens?: number;
-    
+    vector_store_id_main?: string;
+    vector_store_id_objections?: string;
+    kickoff_message?: string;
+    vector_stores?: VectorStore[];
+    openai_model?: string;
+    openai_service_tier?: string;
     settings?: Record<string, any>;
 }
 

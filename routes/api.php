@@ -4,6 +4,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BotController;
 use App\Http\Controllers\BotConfigController;
 use App\Http\Controllers\GreenApiWebhookController;
+use App\Http\Controllers\LogController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -51,6 +52,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/{id}', [BotConfigController::class, 'show']);
         Route::put('/{id}', [BotConfigController::class, 'update']);
         Route::delete('/{id}', [BotConfigController::class, 'destroy']);
+    });
+
+    // Logs management routes
+    Route::prefix('logs')->group(function () {
+        Route::get('/', [LogController::class, 'index']);
+        Route::get('/download', [LogController::class, 'download']);
+        Route::post('/clear', [LogController::class, 'clear']);
     });
 });
 

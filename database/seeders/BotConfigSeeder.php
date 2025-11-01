@@ -19,6 +19,13 @@ class BotConfigSeeder extends Seeder
             'max_tokens' => 2000,
             'vector_store_id_main' => 'vs_6904cd1ffdb081918e282ac233eb07ce',
             'vector_store_id_objections' => 'vs_6904cd74ac8081918552c91c40527af9',
+            'kickoff_message' => "{owner_name_clean}, добрый день!\n\nЯ — ИИ-ассистент Capital Mars. Мы уже {objectCount} сдавали вашу квартиру на {address}. Видим, что объявление снова актуально — верно? Если да, готовы подключиться к сдаче.",
+            'vector_stores' => [
+                ['name' => 'Основная база знаний', 'id' => 'vs_6904cd1ffdb081918e282ac233eb07ce'],
+                ['name' => 'База возражений', 'id' => 'vs_6904cd74ac8081918552c91c40527af9'],
+            ],
+            'openai_model' => 'gpt-5-2025-08-07',
+            'openai_service_tier' => 'flex',
             'settings' => [],
         ]);
 

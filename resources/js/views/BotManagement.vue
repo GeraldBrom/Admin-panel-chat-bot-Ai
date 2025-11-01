@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import MainLayout from '@/layouts/MainLayout.vue';
 import { useBotStore } from '@/stores/botStore';
-import type { BotConfig } from '@/types';
+import type { BotConfig, VectorStore } from '@/types';
 
 const botStore = useBotStore();
 
@@ -18,10 +18,22 @@ onMounted(() => {
     botStore.fetchBotConfigs(selectedPlatform.value);
 });
 
-const configForm = ref({
+const configForm = ref<{
+    prompt: string;
+    temperature: number;
+    max_tokens: number;
+    kickoff_message: string;
+    vector_stores: VectorStore[];
+    openai_model: string;
+    openai_service_tier: string;
+}>({
     prompt: '',
     temperature: 0.7,
     max_tokens: 2000,
+    kickoff_message: '',
+    vector_stores: [],
+    openai_model: 'gpt-5-2025-08-07',
+    openai_service_tier: 'flex',
 });
 
 const loading = computed(() => botStore.loading);
@@ -51,8 +63,25 @@ const selectConfig = (config: BotConfig) => {
             prompt: config.prompt,
             temperature: config.temperature || 0.7,
             max_tokens: config.max_tokens || 2000,
+            kickoff_message: config.kickoff_message || '',
+            vector_stores: config.vector_stores ? [...config.vector_stores] : [],
+            openai_model: config.openai_model || 'gpt-5-2025-08-07',
+            openai_service_tier: config.openai_service_tier || 'flex',
         };
     }
+};
+
+// Add new vector store
+const addVectorStore = () => {
+    configForm.value.vector_stores.push({
+        name: '',
+        id: '',
+    });
+};
+
+// Remove vector store
+const removeVectorStore = (index: number) => {
+    configForm.value.vector_stores.splice(index, 1);
 };
 
 // Save config changes
@@ -144,7 +173,12 @@ const cancelEditing = () => {
 
               <div class="config-card__body">
                 <template v-if="selectedConfig?.id !== config.id">
-                  <!-- View mode -->
+
+                  <div class="config-section">
+                    <h4>Приветственное сообщение (Kickoff)</h4>
+                    <div class="config-text config-text--pre">{{ config.kickoff_message || 'Не задано' }}</div>
+                  </div>
+
                   <div class="config-section">
                     <h4>Промпт для ChatGPT</h4>
                     <div class="config-text config-text--pre">{{ config.prompt }}</div>
@@ -152,13 +186,40 @@ const cancelEditing = () => {
 
                   
 
-                  
+                  <div class="config-section">
+                    <h4>Vector Stores (базы знаний RAG)</h4>
+                    <div v-if="config.vector_stores && config.vector_stores.length > 0" class="vector-stores-list">
+                      <div v-for="(store, idx) in config.vector_stores" :key="idx" class="vector-store-item">
+                        <strong>{{ store.name }}:</strong> <code>{{ store.id }}</code>
+                      </div>
+                    </div>
+                    <div v-else class="config-text">Не задано</div>
+                  </div>
 
-                  
+                  <div class="config-section">
+                    <h4>Модель OpenAI</h4>
+                    <div class="config-text"><code>{{ config.openai_model || 'gpt-5-2025-08-07' }}</code></div>
+                  </div>
+
+                  <div class="config-section">
+                    <h4>Service Tier</h4>
+                    <div class="config-text">{{ config.openai_service_tier || 'flex' }}</div>
+                  </div>
                 </template>
 
                 <template v-else>
-                  <!-- Edit mode -->
+
+                  <div class="form-group">
+                    <label class="form-label">Приветственное сообщение (Kickoff)</label>
+                    <textarea
+                      v-model="configForm.kickoff_message"
+                      class="form-textarea"
+                      rows="6"
+                      placeholder="Например: {owner_name_clean}, добрый день!&#10;&#10;Я — ИИ-ассистент Capital Mars..."
+                    />
+                    <small class="form-help">Первое сообщение, которое бот отправляет клиенту. Доступны переменные: {owner_name_clean}, {address}, {objectCount}, {price}</small>
+                  </div>
+                  
                   <div class="form-group">
                     <label class="form-label">Промпт для ChatGPT *</label>
                     <textarea
@@ -169,6 +230,7 @@ const cancelEditing = () => {
                     />
                     <small class="form-help">Этот промпт определяет поведение и стиль ответов бота</small>
                   </div>
+
 
                   <div class="form-row">
                     <div class="form-group">
@@ -197,7 +259,69 @@ const cancelEditing = () => {
                     </div>
                   </div>
 
-                  
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label class="form-label">Модель OpenAI</label>
+                      <input
+                        v-model="configForm.openai_model"
+                        type="text"
+                        class="form-input"
+                        placeholder="gpt-5-2025-08-07"
+                      />
+                      <small class="form-help">Модель OpenAI для генерации ответов (например: gpt-5-2025-08-07, gpt-4o, gpt-4-turbo)</small>
+                    </div>
+
+                    <div class="form-group">
+                      <label class="form-label">Service Tier</label>
+                      <select v-model="configForm.openai_service_tier" class="form-input">
+                        <option value="auto">Auto</option>
+                        <option value="default">Default</option>
+                        <option value="flex">Flex</option>
+                      </select>
+                      <small class="form-help">Уровень сервиса OpenAI API</small>
+                    </div>
+                  </div>
+
+                  <div class="form-group">
+                    <label class="form-label">Vector Stores (базы знаний RAG)</label>
+                    <div class="vector-stores-editor">
+                      <div 
+                        v-for="(store, index) in configForm.vector_stores" 
+                        :key="index"
+                        class="vector-store-row"
+                      >
+                        <input
+                          v-model="store.name"
+                          type="text"
+                          class="form-input"
+                          placeholder="Название (например: Основная база)"
+                          style="flex: 1;"
+                        />
+                        <input
+                          v-model="store.id"
+                          type="text"
+                          class="form-input"
+                          placeholder="vs_..."
+                          style="flex: 2;"
+                        />
+                        <button 
+                          type="button"
+                          class="btn btn--ghost btn--sm"
+                          @click="removeVectorStore(index)"
+                        >
+                          🗑️
+                        </button>
+                      </div>
+                      <button 
+                        type="button"
+                        class="btn btn--secondary btn--sm"
+                        @click="addVectorStore"
+                      >
+                        ➕ Добавить Vector Store
+                      </button>
+                    </div>
+                    <small class="form-help">Добавьте базы знаний для RAG (Retrieval-Augmented Generation). Каждая база будет использоваться для поиска релевантной информации.</small>
+                  </div>
 
                   <div class="config-card__footer">
                     <button class="btn btn--ghost" @click="cancelEditing">Отмена</button>
@@ -219,5 +343,41 @@ const cancelEditing = () => {
 .config-text--pre {
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+.vector-stores-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.vector-store-item {
+  padding: 8px 12px;
+  background: #f8f9fa;
+  border-radius: 4px;
+  border: 1px solid #dee2e6;
+}
+
+.vector-store-item code {
+  background: #e9ecef;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+
+.vector-stores-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.vector-store-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.vector-store-row .form-input {
+  margin: 0;
 }
 </style>
