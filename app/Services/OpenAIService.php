@@ -113,11 +113,14 @@ class OpenAIService
                 ];
 
                 if ($content === '') {
-                    Log::warning('OpenAI Responses API вернул пустой контент', [
+                    Log::warning('OpenAI Responses API вернул пустой контент, fallback на chat/completions', [
                         'response_id' => $responseId,
                         'output_structure' => $rawOutput,
                         'usage' => $usage,
                     ]);
+                    
+                    // Fallback на chat/completions API, если Responses API не вернул message
+                    return $this->chat($systemPrompt, $history, $temperature, $maxTokens, null, null, $model);
                 }
 
                 return [
@@ -135,19 +138,19 @@ class OpenAIService
             Log::warning('OpenAI Responses API timeout/connection error, falling back to chat/completions ошибка таймаута или проблем с соединением', [
                 'error' => $e->getMessage()
             ]);
-            return $this->chat($systemPrompt, $history, $temperature, $maxTokens, null, null, $model, $serviceTier);
+            return $this->chat($systemPrompt, $history, $temperature, $maxTokens, null, null, $model);
         } catch (\Throwable $e) {
             Log::error('OpenAI chatWithRag exception ошибка', [ 'error' => $e->getMessage() ]);
         }
 
-        return $this->chat($systemPrompt, $history, $temperature, $maxTokens, null, null, $model, $serviceTier);
+        return $this->chat($systemPrompt, $history, $temperature, $maxTokens, null, null, $model);
     }
 
     /**
      * Единая точка входа для чата: системный промпт + история → ответ ассистента
      * Возвращает массив: ['content' => string, 'response_id' => string|null, 'usage' => ['prompt_tokens'=>int,'completion_tokens'=>int]]
      */
-    public function chat(string $systemPrompt, array $history, ?float $temperature = null, ?int $maxTokens = null, ?string $vectorStoreIdMain = null, ?string $vectorStoreIdObjections = null, ?string $model = null, ?string $serviceTier = null): array
+    public function chat(string $systemPrompt, array $history, ?float $temperature = null, ?int $maxTokens = null, ?string $vectorStoreIdMain = null, ?string $vectorStoreIdObjections = null, ?string $model = null): array
     {
         $messages = [];
         $systemParts = $systemPrompt;
@@ -180,8 +183,10 @@ class OpenAIService
             'model' => $model ?? 'gpt-5-2025-08-07',
             'messages' => $messages,
             'max_completion_tokens' => $maxTokens ?? 500,
-            'service_tier' => $serviceTier ?? 'flex',
         ];
+        
+        // service_tier поддерживается только в Responses API, не в chat/completions
+        // Поэтому не добавляем его в payload
         try {
             $response = $this->getHttpClient()
                 ->connectTimeout(10)

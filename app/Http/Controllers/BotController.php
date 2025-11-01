@@ -92,6 +92,19 @@ class BotController extends Controller
 
         if ($session && $session->status === 'running') {
             $session->stop();
+            
+            // Финализируем диалог: извлекаем факты и генерируем резюме
+            try {
+                $this->dialogService->finalizeDialog($chatId);
+                Log::info('Dialog finalized successfully', ['chatId' => $chatId]);
+            } catch (\Exception $e) {
+                Log::error('Failed to finalize dialog', [
+                    'chatId' => $chatId,
+                    'error' => $e->getMessage(),
+                ]);
+                // Не падаем, даже если финализация не удалась
+            }
+            
             return response()->json([
                 'message' => 'Bot stopped successfully',
                 'data' => new BotSessionResource($session->fresh()),
@@ -111,11 +124,26 @@ class BotController extends Controller
     public function stopAll(): JsonResponse
     {
         try {
-            $count = BotSession::where('status', 'running')->count();
-            BotSession::where('status', 'running')->update([
-                'status' => 'stopped',
-                'stopped_at' => now(),
-            ]);
+            $runningSessions = BotSession::where('status', 'running')->get();
+            $count = $runningSessions->count();
+            
+            // Останавливаем каждую сессию и финализируем диалоги
+            foreach ($runningSessions as $session) {
+                $session->update([
+                    'status' => 'stopped',
+                    'stopped_at' => now(),
+                ]);
+                
+                // Финализируем каждый диалог
+                try {
+                    $this->dialogService->finalizeDialog($session->chat_id);
+                } catch (\Exception $e) {
+                    Log::error('Failed to finalize dialog during stopAll', [
+                        'chatId' => $session->chat_id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
 
             return response()->json([
                 'message' => "Stopped {$count} bot(s)",

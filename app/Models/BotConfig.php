@@ -16,8 +16,6 @@ class BotConfig extends Model
         'scenario_description',
         'temperature',
         'max_tokens',
-        'vector_store_id_main',
-        'vector_store_id_objections',
         'kickoff_message',
         'vector_stores',
         'openai_model',
@@ -28,8 +26,6 @@ class BotConfig extends Model
     protected $casts = [
         'temperature' => 'decimal:2',
         'max_tokens' => 'integer',
-        'vector_store_id_main' => 'string',
-        'vector_store_id_objections' => 'string',
         'kickoff_message' => 'string',
         'vector_stores' => 'array',
         'openai_model' => 'string',

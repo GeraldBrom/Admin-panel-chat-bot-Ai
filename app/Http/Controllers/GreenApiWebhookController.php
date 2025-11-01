@@ -7,6 +7,7 @@ use App\Services\GreenApiService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
 
 class GreenApiWebhookController extends Controller
 {
@@ -48,6 +49,22 @@ class GreenApiWebhookController extends Controller
                     if (!$normalized) {
                         continue;
                     }
+                    
+                    // Защита от дублирования: проверяем messageId
+                    $messageId = $normalized['meta']['messageId'] ?? null;
+                    if ($messageId) {
+                        $cacheKey = "processed_message_{$messageId}";
+                        if (Cache::has($cacheKey)) {
+                            Log::info('[GreenAPI Webhook] Сообщение уже обработано, пропускаем', [
+                                'messageId' => $messageId,
+                                'chatId' => $normalized['chatId'],
+                            ]);
+                            continue;
+                        }
+                        // Помечаем сообщение как обработанное на 1 час
+                        Cache::put($cacheKey, true, 3600);
+                    }
+                    
                     $this->dialogService->processIncomingMessage(
                         $normalized['chatId'],
                         $normalized['messageText'],
@@ -59,6 +76,26 @@ class GreenApiWebhookController extends Controller
                 $message = $payload['message'] ?? $payload['body'] ?? $payload;
                 $normalized = $this->normalizeMessage(is_array($message) ? $message : []);
                 if ($normalized) {
+                    // Защита от дублирования: проверяем messageId
+                    $messageId = $normalized['meta']['messageId'] ?? null;
+                    if ($messageId) {
+                        $cacheKey = "processed_message_{$messageId}";
+                        if (Cache::has($cacheKey)) {
+                            Log::info('[GreenAPI Webhook] Сообщение уже обработано, пропускаем', [
+                                'messageId' => $messageId,
+                                'chatId' => $normalized['chatId'],
+                            ]);
+                            return response()->json([
+                                'status' => 'ok',
+                                'processed' => 0,
+                                'message' => 'Already processed',
+                                'received_at' => now()->toIso8601String(),
+                            ]);
+                        }
+                        // Помечаем сообщение как обработанное на 1 час
+                        Cache::put($cacheKey, true, 3600);
+                    }
+                    
                     $this->dialogService->processIncomingMessage(
                         $normalized['chatId'],
                         $normalized['messageText'],
