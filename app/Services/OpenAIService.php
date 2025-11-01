@@ -225,6 +225,9 @@ class OpenAIService
                 CURLOPT_TCP_KEEPIDLE => 120,
                 CURLOPT_TCP_KEEPINTVL => 60,
                 CURLOPT_FRESH_CONNECT => false, // Использовать пул соединений
+                CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4, // Использовать только IPv4
+                CURLOPT_DNS_USE_GLOBAL_CACHE => false, // Отключить глобальный DNS кэш
+                CURLOPT_NOSIGNAL => 1, // Избежать проблем с потоками
             ],
         ];
 

@@ -13,7 +13,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        // Для API запросов возвращаем JSON вместо редиректа
+        $middleware->redirectGuestsTo(fn () => response()->json([
+            'message' => 'Unauthenticated.'
+        ], 401));
     })
     ->withSchedule(function (Schedule $schedule): void {
         // Polling для локальной разработки (на продакшене используется webhook)

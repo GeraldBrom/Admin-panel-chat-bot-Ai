@@ -35,6 +35,9 @@ class GreenApiService
                         CURLOPT_TCP_KEEPALIVE => 1,
                         CURLOPT_TCP_KEEPIDLE => 120,
                         CURLOPT_TCP_KEEPINTVL => 60,
+                        CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4, // Использовать только IPv4
+                        CURLOPT_DNS_USE_GLOBAL_CACHE => false, // Отключить глобальный DNS кэш
+                        CURLOPT_NOSIGNAL => 1, // Избежать проблем с потоками
                     ],
                 ])
                 ->post($url, [
@@ -81,6 +84,9 @@ class GreenApiService
                     'curl' => [
                         CURLOPT_DNS_CACHE_TIMEOUT => 300,
                         CURLOPT_TCP_KEEPALIVE => 1,
+                        CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,
+                        CURLOPT_DNS_USE_GLOBAL_CACHE => false,
+                        CURLOPT_NOSIGNAL => 1,
                     ],
                 ])
                 ->get($url, [
@@ -139,6 +145,9 @@ class GreenApiService
                     'curl' => [
                         CURLOPT_DNS_CACHE_TIMEOUT => 300,
                         CURLOPT_TCP_KEEPALIVE => 1,
+                        CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,
+                        CURLOPT_DNS_USE_GLOBAL_CACHE => false,
+                        CURLOPT_NOSIGNAL => 1,
                     ],
                 ])
                 ->get($url);
@@ -177,6 +186,9 @@ class GreenApiService
                     'curl' => [
                         CURLOPT_DNS_CACHE_TIMEOUT => 300,
                         CURLOPT_TCP_KEEPALIVE => 1,
+                        CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,
+                        CURLOPT_DNS_USE_GLOBAL_CACHE => false,
+                        CURLOPT_NOSIGNAL => 1,
                     ],
                 ])
                 ->delete($url);
