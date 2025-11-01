@@ -40,8 +40,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/', [BotController::class, 'index']);
         Route::post('/start', [BotController::class, 'start']);
         Route::post('/stop-all', [BotController::class, 'stopAll']);
-        Route::get('/{chatId}', [BotController::class, 'show']);
-        Route::delete('/{chatId}', [BotController::class, 'stop']);
+        Route::get('/{chatId}', [BotController::class, 'show'])->where('chatId', '.*');
+        Route::delete('/{chatId}', [BotController::class, 'stop'])->where('chatId', '.*');
     });
 
     // Bot configs routes (без статуса "активная" — конфигурации выбираются явно)

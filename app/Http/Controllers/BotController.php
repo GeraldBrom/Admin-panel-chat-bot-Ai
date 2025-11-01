@@ -138,13 +138,30 @@ class BotController extends Controller
      */
     public function show(string $chatId): JsonResponse
     {
-        $session = BotSession::with('dialog.messages')
-            ->where('chat_id', $chatId)
-            ->firstOrFail();
+        try {
+            $session = BotSession::with('dialog.messages')
+                ->where('chat_id', $chatId)
+                ->firstOrFail();
 
-        return response()->json([
-            'data' => new BotSessionResource($session),
-        ]);
+            return response()->json([
+                'data' => new BotSessionResource($session),
+            ]);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'message' => 'Bot session not found',
+                'chat_id' => $chatId,
+            ], 404);
+        } catch (\Exception $e) {
+            Log::error('Failed to get bot status', [
+                'chat_id' => $chatId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'message' => 'Failed to get bot status',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 }
 

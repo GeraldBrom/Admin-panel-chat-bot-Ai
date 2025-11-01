@@ -219,7 +219,7 @@ class OpenAIService
 
         $options = [
             'timeout' => 60, // 60 секунд таймаут для медленных запросов
-            'connect_timeout' => 10, // Таймаут подключения
+            'connect_timeout' => 15, // Увеличен таймаут подключения
             'curl' => [
                 CURLOPT_DNS_CACHE_TIMEOUT => 300,
                 CURLOPT_TCP_KEEPALIVE => 1,
@@ -230,6 +230,11 @@ class OpenAIService
                 CURLOPT_DNS_USE_GLOBAL_CACHE => false, // Отключить глобальный DNS кэш
                 CURLOPT_NOSIGNAL => 1, // Избежать проблем с потоками (КРИТИЧНО!)
                 CURLOPT_FORBID_REUSE => 0, // Разрешить переиспользование соединений
+                // Прямой резолв DNS для OpenAI API (решает проблему getaddrinfo() thread)
+                CURLOPT_RESOLVE => [
+                    'api.openai.com:443:104.18.7.192',
+                    'api.openai.com:443:104.18.6.192',
+                ],
             ],
         ];
 
