@@ -29,7 +29,7 @@ class Dialog extends Model
     ];
 
     /**
-     * Get all messages in this dialog
+     * Получить все сообщения в этом диалоге
      */
     public function messages(): HasMany
     {
@@ -37,7 +37,7 @@ class Dialog extends Model
     }
 
     /**
-     * Get all facts discovered in this dialog
+     * Получить все факты, обнаруженные в этом диалоге
      */
     public function facts(): HasMany
     {
@@ -45,7 +45,7 @@ class Dialog extends Model
     }
 
     /**
-     * Generate dialog_id from client_id and brand
+     * Генерировать dialog_id из client_id и brand
      */
     public static function generateDialogId(string $clientId, string $brand = 'capital_mars'): string
     {
@@ -53,7 +53,7 @@ class Dialog extends Model
     }
 
     /**
-     * Get or create dialog
+     * Получить или создать диалог
      */
     public static function getOrCreate(string $clientId, string $brand = 'capital_mars'): self
     {

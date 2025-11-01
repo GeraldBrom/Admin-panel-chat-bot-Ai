@@ -19,7 +19,7 @@ class GreenApiService
     }
 
     /**
-     * Send message via WhatsApp
+     * Отправка сообщения через WhatsApp
      */
     public function sendMessage(string $chatId, string $message): array
     {
@@ -68,14 +68,13 @@ class GreenApiService
     }
 
     /**
-     * Get last incoming messages
+     * Получить последние входящие сообщения
      */
     public function getLastIncomingMessages(int $minutes = 1): array
     {
         $url = "{$this->baseUrl}/waInstance{$this->idInstance}/lastIncomingMessages/{$this->apiToken}";
 
         try {
-            // Нормализуем параметр minutes в допустимые рамки [1..60]
             $minutes = max(1, min(60, (int) $minutes));
 
             $response = Http::acceptJson()
@@ -108,24 +107,22 @@ class GreenApiService
 
             $data = $response->json();
 
-            // Вариант 1: API возвращает массив сообщений
             if (is_array($data) && array_is_list($data)) {
                 return $data;
             }
 
-            // Вариант 2: API возвращает объект с ключом messages
             if (is_array($data) && isset($data['messages']) && is_array($data['messages'])) {
                 return $data['messages'];
             }
 
-            Log::warning('GreenAPI getLastIncomingMessages: unexpected response structure', [
+            Log::warning('GreenAPI getLastIncomingMessages: неожиданная структура ответа', [
                 'parsed' => $data,
                 'url' => $url,
                 'minutes' => $minutes,
             ]);
             return [];
         } catch (\Exception $e) {
-            Log::error('GreenAPI getLastIncomingMessages error', [
+            Log::error('GreenAPI getLastIncomingMessages ошибка', [
                 'error' => $e->getMessage(),
                 'url' => $url,
                 'minutes' => $minutes,
@@ -135,7 +132,7 @@ class GreenApiService
     }
 
     /**
-     * Receive notification (webhook method)
+     * Получить уведомление (метод webhook)
      */
     public function receiveNotification(): ?array
     {
@@ -160,7 +157,7 @@ class GreenApiService
                 $data = $response->json();
                 
                 if (isset($data['receiptId'])) {
-                    // Delete notification after processing
+                    // Удалить уведомление после обработки
                     $this->deleteNotification($data['receiptId']);
                 }
 
@@ -169,7 +166,7 @@ class GreenApiService
 
             return null;
         } catch (\Exception $e) {
-            Log::error('GreenAPI receiveNotification error', [
+            Log::error('GreenAPI receiveNotification ошибка', [
                 'error' => $e->getMessage(),
             ]);
             return null;
@@ -177,7 +174,7 @@ class GreenApiService
     }
 
     /**
-     * Delete processed notification
+     * Удалить обработанное уведомление
      */
     private function deleteNotification(string $receiptId): void
     {
@@ -198,7 +195,7 @@ class GreenApiService
                 ])
                 ->delete($url);
         } catch (\Exception $e) {
-            Log::error('GreenAPI deleteNotification error', [
+            Log::error('GreenAPI deleteNotification ошибка', [
                 'receiptId' => $receiptId,
                 'error' => $e->getMessage(),
             ]);

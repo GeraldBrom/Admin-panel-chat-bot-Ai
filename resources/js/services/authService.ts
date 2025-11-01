@@ -2,8 +2,7 @@ import api from './api';
 import type { 
     LoginCredentials, 
     AuthResponse, 
-    User,
-    ApiResponse 
+    User
 } from '@/types';
 
 class AuthService {

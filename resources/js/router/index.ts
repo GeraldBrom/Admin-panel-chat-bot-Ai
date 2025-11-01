@@ -1,7 +1,6 @@
 import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router';
 import authService from '@/services/authService';
 
-// Lazy loading компонентов
 const Login = () => import('@/views/Login.vue');
 const Dashboard = () => import('@/views/Dashboard.vue');
 const ChatBots = () => import('@/views/ChatBots.vue');
@@ -69,7 +68,6 @@ const router = createRouter({
     routes,
 });
 
-// Navigation guard
 router.beforeEach((to, _from, next) => {
     const isAuthenticated = authService.isAuthenticated();
     const requiresAuth = to.meta.requiresAuth;

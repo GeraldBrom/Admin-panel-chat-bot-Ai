@@ -8,7 +8,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
 class BotConfigResource extends JsonResource
 {
     /**
-     * Transform the resource into an array.
+     * Преобразовать ресурс в массив.
      */
     public function toArray(Request $request): array
     {

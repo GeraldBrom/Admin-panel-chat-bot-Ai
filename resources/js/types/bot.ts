@@ -46,6 +46,8 @@ export interface BotSession {
     stopped_at?: string;
     created_at: string;
     updated_at: string;
+    dialog_id?: string;
+    messages?: Message[];
 }
 
 export interface Message {

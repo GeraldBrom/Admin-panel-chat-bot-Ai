@@ -12,6 +12,10 @@
 // Components
 @import 'components/buttons';
 @import 'components/forms';
+@import 'components/bot-dialog';
+@import 'components/chat-bot-card';
+@import 'components/message-list';
+@import 'components/session-list';
 
 // Layouts
 @import 'layouts/main';
@@ -21,6 +25,7 @@
 @import 'pages/dashboard';
 @import 'pages/chatbots';
 @import 'pages/bot-management';
+@import 'pages/logs';
 
 // App specific styles
 #app {

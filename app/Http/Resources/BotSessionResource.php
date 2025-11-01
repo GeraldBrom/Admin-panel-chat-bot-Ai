@@ -8,7 +8,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
 class BotSessionResource extends JsonResource
 {
     /**
-     * Transform the resource into an array.
+     * Преобразовать ресурс в массив.
      */
     public function toArray(Request $request): array
     {
@@ -25,7 +25,7 @@ class BotSessionResource extends JsonResource
             'stopped_at' => $this->stopped_at?->toISOString(),
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),
-            // Include dialog_id and messages if dialog is loaded
+            // Включить dialog_id и messages, если диалог загружен
             'dialog_id' => $this->whenLoaded('dialog', function () {
                 return $this->dialog?->dialog_id;
             }),

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive, ref } from 'vue';
+import { reactive } from 'vue';
 import { useAuth } from '@/composables/useAuth';
 import type { LoginCredentials } from '@/types';
 

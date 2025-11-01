@@ -38,13 +38,12 @@ class BotConfig extends Model
     ];
 
     /**
-     * Scope: Get configs for platform
+     * Scope: Получить конфигурации для платформы
      */
     public function scopeForPlatform($query, string $platform)
     {
         return $query->where('platform', $platform);
     }
 
-    // Поле активности удалено из бизнес-логики: конфигурации выбираются явно при создании бота
 }
 

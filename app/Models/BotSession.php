@@ -32,7 +32,7 @@ class BotSession extends Model
     ];
 
     /**
-     * Get the dialog for this session
+     * Получить диалог для этой сессии
      */
     public function dialog(): BelongsTo
     {
@@ -41,7 +41,7 @@ class BotSession extends Model
     }
 
     /**
-     * Get the bot config for this session
+     * Получить конфигурацию бота для этой сессии
      */
     public function config(): BelongsTo
     {
@@ -49,7 +49,7 @@ class BotSession extends Model
     }
 
     /**
-     * Scope: Get active sessions
+     * Scope: Получить активные сессии
      */
     public function scopeActive($query)
     {
@@ -57,7 +57,7 @@ class BotSession extends Model
     }
 
     /**
-     * Scope: Get sessions for platform
+     * Scope: Получить сессии для платформы
      */
     public function scopeForPlatform($query, string $platform)
     {
@@ -65,7 +65,7 @@ class BotSession extends Model
     }
 
     /**
-     * Stop the session
+     * Остановка сессии
      */
     public function stop(): bool
     {
@@ -76,7 +76,7 @@ class BotSession extends Model
     }
 
     /**
-     * Check if session is active
+     * Проверить, активна ли сессия
      */
     public function isActive(): bool
     {

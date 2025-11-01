@@ -25,7 +25,7 @@ class Fact extends Model
     ];
 
     /**
-     * Get the dialog this fact belongs to
+     * Получить диалог, к которому принадлежит этот факт
      */
     public function dialog(): BelongsTo
     {
@@ -33,7 +33,7 @@ class Fact extends Model
     }
 
     /**
-     * Get all facts for a dialog
+     * Получить все факты для диалога
      */
     public static function getForDialog(string $dialogId): \Illuminate\Database\Eloquent\Collection
     {

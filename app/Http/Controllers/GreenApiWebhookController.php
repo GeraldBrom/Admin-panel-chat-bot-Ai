@@ -4,13 +4,16 @@ namespace App\Http\Controllers;
 
 use App\Services\DialogService;
 use App\Services\GreenApiService;
-use App\Jobs\ProcessGreenApiWebhook;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
 class GreenApiWebhookController extends Controller
 {
+    public function __construct(
+        private DialogService $dialogService
+    ) {}
+
     public function handle(Request $request): JsonResponse
     {
         $payload = $request->all();
@@ -35,14 +38,57 @@ class GreenApiWebhookController extends Controller
             Log::warning('[GreenAPI Webhook] Получен пустой payload!');
         }
 
-        // Асинхронная обработка после ответа (не блокируем 200 OK)
-        ProcessGreenApiWebhook::dispatchAfterResponse($payload);
+        // Синхронная обработка сообщений
+        try {
+            $processed = 0;
 
-        return response()->json([
-            'status' => 'ok',
-            'queued' => true,
-            'received_at' => now()->toIso8601String(),
-        ]);
+            if (isset($payload['messages']) && is_array($payload['messages'])) {
+                foreach ($payload['messages'] as $message) {
+                    $normalized = $this->normalizeMessage(is_array($message) ? $message : []);
+                    if (!$normalized) {
+                        continue;
+                    }
+                    $this->dialogService->processIncomingMessage(
+                        $normalized['chatId'],
+                        $normalized['messageText'],
+                        $normalized['meta']
+                    );
+                    $processed++;
+                }
+            } else {
+                $message = $payload['message'] ?? $payload['body'] ?? $payload;
+                $normalized = $this->normalizeMessage(is_array($message) ? $message : []);
+                if ($normalized) {
+                    $this->dialogService->processIncomingMessage(
+                        $normalized['chatId'],
+                        $normalized['messageText'],
+                        $normalized['meta']
+                    );
+                    $processed++;
+                }
+            }
+
+            Log::info('[GreenAPI Webhook] Processed messages', [
+                'processed' => $processed,
+            ]);
+
+            return response()->json([
+                'status' => 'ok',
+                'processed' => $processed,
+                'received_at' => now()->toIso8601String(),
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('[GreenAPI Webhook] Failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'payload' => $payload,
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**
@@ -86,6 +132,9 @@ class GreenApiWebhookController extends Controller
 
     /**
      * Приводит формат Green API к общему виду { chatId, messageText, meta }
+     *
+     * @param array<mixed> $message
+     * @return array{chatId:string,messageText:string,meta:array<mixed>}|null
      */
     private function normalizeMessage(array $message = null): ?array
     {
@@ -93,11 +142,9 @@ class GreenApiWebhookController extends Controller
             return null;
         }
 
-        // Популярные поля из Green API (ReceiveNotification / messages)
         $chatId = $message['chatId']
             ?? ($message['senderData']['chatId'] ?? null);
 
-        // textMessage может быть в разных уровнях
         $messageText = $message['textMessage']
             ?? ($message['messageData']['textMessageData']['textMessage'] ?? null);
 
@@ -106,7 +153,7 @@ class GreenApiWebhookController extends Controller
         }
 
         $meta = [
-            'messageId' => $message['idMessage'] ?? ($message['idMessage'] ?? null),
+            'messageId' => $message['idMessage'] ?? null,
             'timestamp' => $message['timestamp'] ?? null,
             'typeMessage' => $message['typeMessage'] ?? ($message['messageData']['typeMessage'] ?? null),
             'raw' => $message,

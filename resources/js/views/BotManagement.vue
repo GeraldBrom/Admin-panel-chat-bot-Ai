@@ -9,7 +9,6 @@ const botStore = useBotStore();
 const selectedConfig = ref<BotConfig | null>(null);
 const selectedPlatform = ref<'whatsapp'>('whatsapp');
 
-// Load configs when platform changes
 watch(selectedPlatform, () => {
     botStore.fetchBotConfigs(selectedPlatform.value);
 });
@@ -46,15 +45,7 @@ const platforms = [
     { value: 'whatsapp', label: 'WhatsApp', icon: '📱' },
 ];
 
-// No per-intent prompts/messages in single-prompt mode
-
-// Removed scenario messages
-
-// No sorting needed
-
-// Select config for editing
 const selectConfig = (config: BotConfig) => {
-    // Toggle editing mode
     if (selectedConfig.value?.id === config.id) {
         selectedConfig.value = null;
     } else {
@@ -71,7 +62,6 @@ const selectConfig = (config: BotConfig) => {
     }
 };
 
-// Add new vector store
 const addVectorStore = () => {
     configForm.value.vector_stores.push({
         name: '',
@@ -79,12 +69,10 @@ const addVectorStore = () => {
     });
 };
 
-// Remove vector store
 const removeVectorStore = (index: number) => {
     configForm.value.vector_stores.splice(index, 1);
 };
 
-// Save config changes
 const saveConfig = async () => {
     if (!selectedConfig.value) return;
     
@@ -97,7 +85,6 @@ const saveConfig = async () => {
     }
 };
 
-// Cancel editing
 const cancelEditing = () => {
     selectedConfig.value = null;
 };
@@ -113,9 +100,7 @@ const cancelEditing = () => {
         </div>
       </div>
 
-      <!-- Main content -->
       <div class="bot-management-content">
-        <!-- Platforms list -->
         <div class="platforms-section">
           <h2>Мессенджеры</h2>
           <div class="platforms-list">
@@ -132,7 +117,6 @@ const cancelEditing = () => {
           </div>
         </div>
 
-        <!-- Selected platform configs -->
         <div class="configs-section">
           <div class="configs-header">
             <h2>Конфигурации для {{ platformLabels[selectedPlatform] }}</h2>
@@ -339,45 +323,3 @@ const cancelEditing = () => {
     </div>
   </MainLayout>
 </template>
-<style scoped>
-.config-text--pre {
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-.vector-stores-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.vector-store-item {
-  padding: 8px 12px;
-  background: #f8f9fa;
-  border-radius: 4px;
-  border: 1px solid #dee2e6;
-}
-
-.vector-store-item code {
-  background: #e9ecef;
-  padding: 2px 6px;
-  border-radius: 3px;
-  font-size: 0.9em;
-}
-
-.vector-stores-editor {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.vector-store-row {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.vector-store-row .form-input {
-  margin: 0;
-}
-</style>

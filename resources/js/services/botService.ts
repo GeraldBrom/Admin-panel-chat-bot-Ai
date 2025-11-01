@@ -1,15 +1,11 @@
 import api from './api';
 import type {
     ChatBot,
-    BotSession,
-    Message,
     BotConfig,
-    CreateChatBotData,
     CreateSessionData,
 } from '@/types';
 
 class BotService {
-    // Bot Sessions (ChatBots) - основная работа с ботами
     /**
      * Получить все сессии ботов
      */
@@ -50,7 +46,6 @@ class BotService {
         return response.data;
     }
 
-    // Bot Config methods
     /**
      * Получить все конфигурации (с фильтром по платформе)
      */
@@ -60,15 +55,6 @@ class BotService {
         return response.data.data || [];
     }
 
-    /**
-     * Получить конкретную конфигурацию
-     */
-    async getBotConfig(id: number): Promise<BotConfig> {
-        const response = await api.get(`/bot-configs/${id}`);
-        return response.data.data;
-    }
-
-    // Получение активной конфигурации больше не требуется
 
     /**
      * Создать конфигурацию
@@ -92,8 +78,6 @@ class BotService {
     async deleteBotConfig(id: number): Promise<void> {
         await api.delete(`/bot-configs/${id}`);
     }
-
-    // Активация конфигурации больше не используется
 }
 
 export default new BotService();

@@ -113,7 +113,7 @@ class OpenAIService
                 ];
 
                 if ($content === '') {
-                    Log::warning('OpenAI Responses API returned empty content', [
+                    Log::warning('OpenAI Responses API вернул пустой контент', [
                         'response_id' => $responseId,
                         'output_structure' => $rawOutput,
                         'usage' => $usage,
@@ -127,21 +127,19 @@ class OpenAIService
                 ];
             }
 
-            Log::error('OpenAI chatWithRag failed', [
+            Log::error('OpenAI chatWithRag failed ошибка', [
                 'status' => $response->status(),
                 'body' => $response->body(),
             ]);
         } catch (\Illuminate\Http\Client\RequestException | \Illuminate\Http\Client\ConnectionException $e) {
-            // Таймаут или проблемы с соединением — сразу фолбэк на обычный chat
-            Log::warning('OpenAI Responses API timeout/connection error, falling back to chat/completions', [
+            Log::warning('OpenAI Responses API timeout/connection error, falling back to chat/completions ошибка таймаута или проблем с соединением', [
                 'error' => $e->getMessage()
             ]);
             return $this->chat($systemPrompt, $history, $temperature, $maxTokens, null, null, $model, $serviceTier);
         } catch (\Throwable $e) {
-            Log::error('OpenAI chatWithRag exception', [ 'error' => $e->getMessage() ]);
+            Log::error('OpenAI chatWithRag exception ошибка', [ 'error' => $e->getMessage() ]);
         }
 
-        // Фолбэк на стандартный chat completion с тем же (расширенным) системным промптом
         return $this->chat($systemPrompt, $history, $temperature, $maxTokens, null, null, $model, $serviceTier);
     }
 
@@ -151,7 +149,6 @@ class OpenAIService
      */
     public function chat(string $systemPrompt, array $history, ?float $temperature = null, ?int $maxTokens = null, ?string $vectorStoreIdMain = null, ?string $vectorStoreIdObjections = null, ?string $model = null, ?string $serviceTier = null): array
     {
-        // история: [['role' => 'user'|'assistant', 'content' => '...'], ...]
         $messages = [];
         $systemParts = $systemPrompt;
         if ($vectorStoreIdMain || $vectorStoreIdObjections) {
@@ -185,7 +182,6 @@ class OpenAIService
             'max_completion_tokens' => $maxTokens ?? 500,
             'service_tier' => $serviceTier ?? 'flex',
         ];
-        // gpt-5 не поддерживает произвольное значение temperature — используем дефолт (не передаём параметр)
         try {
             $response = $this->getHttpClient()
                 ->connectTimeout(10)
@@ -201,7 +197,7 @@ class OpenAIService
                 ];
 
                 if ($content === '') {
-                    Log::warning('OpenAI chat/completions returned empty content', [
+                    Log::warning('OpenAI chat/completions вернул пустой контент', [
                         'response_id' => $responseId,
                         'choices' => $response->json('choices'),
                         'usage' => $usage,
@@ -215,12 +211,12 @@ class OpenAIService
                 ];
             }
 
-            Log::error('OpenAI chat failed', [
+            Log::error('OpenAI chat failed ошибка', [
                 'status' => $response->status(),
                 'body' => $response->body(),
             ]);
         } catch (\Throwable $e) {
-            Log::error('OpenAI chat exception', [ 'error' => $e->getMessage() ]);
+            Log::error('OpenAI chat exception ошибка', [ 'error' => $e->getMessage() ]);
         }
 
         return [
@@ -249,19 +245,18 @@ class OpenAIService
         ]);
 
         $options = [
-            'timeout' => 60, // 60 секунд таймаут для медленных запросов
-            'connect_timeout' => 15, // Увеличен таймаут подключения
+            'timeout' => 60,
+            'connect_timeout' => 15,
             'curl' => [
                 CURLOPT_DNS_CACHE_TIMEOUT => 300,
                 CURLOPT_TCP_KEEPALIVE => 1,
                 CURLOPT_TCP_KEEPIDLE => 120,
                 CURLOPT_TCP_KEEPINTVL => 60,
-                CURLOPT_FRESH_CONNECT => false, // Использовать пул соединений
-                CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4, // Использовать только IPv4
-                CURLOPT_DNS_USE_GLOBAL_CACHE => false, // Отключить глобальный DNS кэш
-                CURLOPT_NOSIGNAL => 1, // Избежать проблем с потоками (КРИТИЧНО!)
-                CURLOPT_FORBID_REUSE => 0, // Разрешить переиспользование соединений
-                // Прямой резолв DNS для OpenAI API (решает проблему getaddrinfo() thread)
+                CURLOPT_FRESH_CONNECT => false,
+                CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,
+                CURLOPT_DNS_USE_GLOBAL_CACHE => false,
+                CURLOPT_NOSIGNAL => 1,
+                CURLOPT_FORBID_REUSE => 0,
                 CURLOPT_RESOLVE => [
                     'api.openai.com:443:104.18.7.192',
                     'api.openai.com:443:104.18.6.192',
@@ -269,7 +264,6 @@ class OpenAIService
             ],
         ];
 
-        // Поддержка прокси через .env (USE_PROXY, PROXY_HOST, PROXY_PORT)
         if ($this->useProxy && $this->proxyHost && $this->proxyPort) {
             $proxyUri = sprintf('socks5://%s:%s', $this->proxyHost, $this->proxyPort);
             $options['proxy'] = $proxyUri;

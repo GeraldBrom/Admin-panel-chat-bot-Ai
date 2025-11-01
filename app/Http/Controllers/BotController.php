@@ -17,7 +17,7 @@ class BotController extends Controller
     ) {}
 
     /**
-     * List all bot sessions
+     * Список всех сессий ботов
      */
     public function index(Request $request): JsonResponse
     {
@@ -37,7 +37,7 @@ class BotController extends Controller
     }
 
     /**
-     * Start bot session
+     * Запуск сессии бота
      */
     public function start(Request $request): JsonResponse
     {
@@ -84,7 +84,7 @@ class BotController extends Controller
     }
 
     /**
-     * Stop bot session
+     * Остановка сессии бота
      */
     public function stop(string $chatId): JsonResponse
     {
@@ -106,7 +106,7 @@ class BotController extends Controller
     }
 
     /**
-     * Stop all bots
+     * Остановка всех ботов
      */
     public function stopAll(): JsonResponse
     {
@@ -134,7 +134,7 @@ class BotController extends Controller
     }
 
     /**
-     * Get bot status
+     * Получение статуса бота
      */
     public function show(string $chatId): JsonResponse
     {

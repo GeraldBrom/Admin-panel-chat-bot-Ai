@@ -371,3 +371,44 @@
         border-top: 1px solid $border-color;
     }
 }
+
+.config-text--pre {
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.vector-stores-list {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+}
+
+.vector-store-item {
+    padding: $spacing-sm $spacing-md;
+    background: $bg-gray-50;
+    border-radius: $border-radius-sm;
+    border: 1px solid $border-color;
+    
+    code {
+        background: $bg-gray-100;
+        padding: 2px $spacing-sm;
+        border-radius: $border-radius-sm;
+        font-size: 0.9em;
+    }
+}
+
+.vector-stores-editor {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-md;
+}
+
+.vector-store-row {
+    display: flex;
+    gap: $spacing-sm;
+    align-items: center;
+    
+    .form-input {
+        margin: 0;
+    }
+}

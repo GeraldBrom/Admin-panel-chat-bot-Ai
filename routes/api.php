@@ -49,7 +49,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('bot-configs')->group(function () {
         Route::get('/', [BotConfigController::class, 'index']);
         Route::post('/', [BotConfigController::class, 'store']);
-        Route::get('/{id}', [BotConfigController::class, 'show']);
         Route::put('/{id}', [BotConfigController::class, 'update']);
         Route::delete('/{id}', [BotConfigController::class, 'destroy']);
     });

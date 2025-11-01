@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Validator;
 class BotConfigController extends Controller
 {
     /**
-     * List all bot configs (optionally filtered by platform)
+     * Список всех конфигураций ботов (опционально фильтруется по платформе)
      */
     public function index(Request $request): JsonResponse
     {
@@ -29,22 +29,8 @@ class BotConfigController extends Controller
         ]);
     }
 
-    // Метод получения "активной" конфигурации удалён — конфигурации выбираются явно при создании бота
-
     /**
-     * Get specific bot config
-     */
-    public function show(int $id): JsonResponse
-    {
-        $config = BotConfig::findOrFail($id);
-
-        return response()->json([
-            'data' => new BotConfigResource($config),
-        ]);
-    }
-
-    /**
-     * Create new bot config
+     * Создание новой конфигурации бота
      */
     public function store(Request $request): JsonResponse
     {
@@ -93,7 +79,7 @@ class BotConfigController extends Controller
     }
 
     /**
-     * Update bot config
+     * Обновление конфигурации бота
      */
     public function update(Request $request, int $id): JsonResponse
     {
@@ -157,7 +143,7 @@ class BotConfigController extends Controller
     }
 
     /**
-     * Delete bot config
+     * Удаление конфигурации бота
      */
     public function destroy(int $id): JsonResponse
     {
@@ -180,7 +166,5 @@ class BotConfigController extends Controller
             ], 500);
         }
     }
-
-    // Метод activate удалён — статуса у конфигураций больше нет
 }
 

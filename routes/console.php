@@ -9,4 +9,3 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-// Расписание обработки входящих отключено по требованию (без джоб)

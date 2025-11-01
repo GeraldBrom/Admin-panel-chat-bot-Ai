@@ -1,0 +1,113 @@
+// Chat Bot Card component styles
+.chat-bot-card {
+    @include card;
+    cursor: pointer;
+    transition: all $transition-base;
+    
+    &:hover {
+        box-shadow: $box-shadow-lg;
+        transform: translateY(-2px);
+    }
+    
+    &--selected {
+        border: 2px solid $primary-color;
+    }
+    
+    // header удалён по требованию
+    
+    &__body {
+        margin-bottom: $spacing-md;
+    }
+    
+    &__info {
+        display: flex;
+        flex-direction: column;
+        gap: $spacing-sm;
+    }
+    
+    &__footer {
+        display: flex;
+        gap: $spacing-lg;
+        padding-top: $spacing-md;
+        border-top: 1px solid $border-color;
+    }
+}
+
+.status {
+    padding: $spacing-xs $spacing-md;
+    border-radius: $border-radius-sm;
+    font-size: $font-size-sm;
+    font-weight: 600;
+    text-transform: uppercase;
+    
+    &--online {
+        background: rgba($success-color, 0.1);
+        color: $success-color;
+    }
+    
+    &--processing {
+        background: rgba($warning-color, 0.1);
+        color: $warning-color;
+    }
+    
+    &--offline {
+        background: rgba($text-secondary, 0.1);
+        color: $text-secondary;
+    }
+}
+
+.info-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    
+    .info-label {
+        color: $text-secondary;
+        font-size: $font-size-sm;
+    }
+    
+    .info-value {
+        color: $text-primary;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+}
+
+.platform-icon {
+    font-size: 1.25rem;
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    
+    .stat-number {
+        font-size: $font-size-xl;
+        font-weight: 700;
+        color: $primary-color;
+    }
+    
+    .stat-label {
+        font-size: $font-size-xs;
+        color: $text-secondary;
+    }
+}
+
+.btn--danger:hover {
+    color: $danger-color;
+}
+
+.chat-bot-card__controls {
+    padding-top: $spacing-md;
+    margin-top: $spacing-md;
+    border-top: 1px solid $border-color;
+    
+    .btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+

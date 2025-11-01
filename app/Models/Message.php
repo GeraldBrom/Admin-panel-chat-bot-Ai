@@ -21,7 +21,7 @@ class Message extends Model
     ];
 
     protected $casts = [
-        'content' => 'string', // JSON string
+        'content' => 'string',
         'previous_response_id' => 'string',
         'meta' => 'array',
         'tokens_in' => 'integer',
@@ -29,7 +29,7 @@ class Message extends Model
     ];
 
     /**
-     * Get the dialog this message belongs to
+     * Получить диалог, к которому принадлежит это сообщение
      */
     public function dialog(): BelongsTo
     {
@@ -37,7 +37,7 @@ class Message extends Model
     }
 
     /**
-     * Get recent messages for a dialog (for context)
+     * Получить недавние сообщения для диалога (для контекста)
      */
     public static function getRecentMessages(string $dialogId, int $limit = 10): \Illuminate\Database\Eloquent\Collection
     {
@@ -45,7 +45,7 @@ class Message extends Model
             ->orderBy('created_at', 'desc')
             ->limit($limit)
             ->get()
-            ->reverse(); // reverse to get chronological order
+            ->reverse();
     }
 }
 

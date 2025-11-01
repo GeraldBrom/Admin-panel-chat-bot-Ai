@@ -4,7 +4,6 @@ import botService from '@/services/botService';
 import type { ChatBot, BotConfig, Message } from '@/types';
 
 export const useBotStore = defineStore('bot', () => {
-    // State
     const chatBots = ref<ChatBot[]>([]);
     const currentChatBot = ref<ChatBot | null>(null);
     const messages = ref<Message[]>([]);
@@ -12,14 +11,10 @@ export const useBotStore = defineStore('bot', () => {
     const loading = ref(false);
     const error = ref<string | null>(null);
 
-    // Getters
     const activeChatBots = computed(() => 
         chatBots.value.filter(bot => bot.status === 'running')
     );
 
-    // Активная конфигурация больше не используется — конфиг выбирается явно
-
-    // ChatBot Actions
     async function fetchAllChatBots() {
         try {
             loading.value = true;
@@ -40,7 +35,6 @@ export const useBotStore = defineStore('bot', () => {
             const bot = await botService.getChatBot(chatId);
             currentChatBot.value = bot;
             
-            // Update messages if available
             if (bot.messages) {
                 messages.value = bot.messages;
             }
@@ -60,13 +54,10 @@ export const useBotStore = defineStore('bot', () => {
             error.value = null;
             const newBot = await botService.startBot(data);
             
-            // Проверяем, нет ли уже бота с таким chat_id
             const existingIndex = chatBots.value.findIndex(bot => bot.chat_id === newBot.chat_id);
             if (existingIndex !== -1) {
-                // Обновляем существующего бота
                 chatBots.value[existingIndex] = newBot;
             } else {
-                // Добавляем нового бота
             chatBots.value.push(newBot);
             }
             
@@ -80,7 +71,6 @@ export const useBotStore = defineStore('bot', () => {
     }
 
     async function updateChatBot(chatId: string, data: any) {
-        // Update через API пока нет, можно добавить позже
         try {
             loading.value = true;
             error.value = null;
@@ -106,7 +96,6 @@ export const useBotStore = defineStore('bot', () => {
             error.value = null;
             const stoppedBot = await botService.stopBot(chatId);
             
-            // Обновляем статус бота вместо удаления
             const index = chatBots.value.findIndex(bot => bot.chat_id === chatId);
             if (index !== -1) {
                 chatBots.value[index] = stoppedBot;
@@ -129,7 +118,6 @@ export const useBotStore = defineStore('bot', () => {
             error.value = null;
             await botService.stopAllBots();
             
-            // Обновляем статус всех ботов на stopped
             chatBots.value = chatBots.value.map(bot => ({
                 ...bot,
                 status: 'stopped' as const,
@@ -149,7 +137,6 @@ export const useBotStore = defineStore('bot', () => {
         }
     }
 
-    // Config Actions
     async function fetchBotConfigs(platform?: 'whatsapp') {
         try {
             loading.value = true;
@@ -210,7 +197,6 @@ export const useBotStore = defineStore('bot', () => {
         }
     }
 
-    // Активация конфигурации не требуется
 
     function clearError() {
         error.value = null;
@@ -222,7 +208,6 @@ export const useBotStore = defineStore('bot', () => {
     }
 
     return {
-        // State
         chatBots,
         currentChatBot,
         messages,
@@ -230,11 +215,9 @@ export const useBotStore = defineStore('bot', () => {
         loading,
         error,
         
-        // Getters
         activeChatBots,
         
         
-        // Actions
         fetchAllChatBots,
         fetchChatBot,
         createChatBot,

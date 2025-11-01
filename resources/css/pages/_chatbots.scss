@@ -6,6 +6,7 @@
     height: calc(100vh - 150px);
     display: flex;
     flex-direction: column;
+    overflow-x: hidden;
 }
 
 .page-header {
@@ -63,10 +64,15 @@
 }
 
 .bots-grid {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 1rem;
     padding-bottom: 1rem;
+    overflow-x: hidden;
+}
+
+.chat-bot-card {
+    min-width: 0;
 }
 
 .chat-section {

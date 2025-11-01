@@ -20,73 +20,49 @@ const newBotForm = ref({
 const loading = computed(() => botStore.loading);
 const error = computed(() => botStore.error);
 
-// Load bots on mount
 onMounted(async () => {
-    console.log('[ChatBots] onMounted: fetching all chat bots...');
-    try {
-    await botStore.fetchAllChatBots();
-        console.log('[ChatBots] Bots loaded:', botStore.chatBots);
-    } catch (e) {
-        console.error('[ChatBots] Failed to load bots on mount:', e);
-    }
+  await botStore.fetchAllChatBots();
 });
 
-// Select bot and load its messages
 const selectBot = async (bot: ChatBot) => {
     try {
-        console.log('[ChatBots] Selecting bot:', bot);
         selectedBot.value = bot;
-        // Если у бота уже есть сообщения, используем их
         if (bot.messages) {
             botStore.messages = bot.messages;
-            console.log('[ChatBots] Using cached messages for bot:', bot.chat_id, 'count:', bot.messages.length);
         } else {
-            // Загружаем бота с сообщениями с сервера
-            console.log('[ChatBots] Fetching full bot with messages for:', bot.chat_id);
             const fullBot = await botStore.fetchChatBot(bot.chat_id);
             selectedBot.value = fullBot;
-            console.log('[ChatBots] Full bot loaded:', {
-                chat_id: fullBot.chat_id,
-                messagesCount: fullBot.messages?.length ?? 0,
-            });
         }
     } catch (err) {
-        console.error('[ChatBots] Failed to load bot messages:', err);
+        console.error('[ChatBots] Failed to select bot:', err);
     }
 };
 
-// Polling for messages of selected bot
 const pollTimer = ref<number | null>(null);
 
 watch(
     () => selectedBot.value?.chat_id,
     async (chatId) => {
-        // Clear previous timer
         if (pollTimer.value) {
             clearInterval(pollTimer.value);
             pollTimer.value = null;
         }
         if (!chatId) return;
 
-        // Immediate refresh once on select
         try {
-            console.log('[ChatBots] Initial refresh messages for:', chatId);
             const fullBot = await botStore.fetchChatBot(chatId);
             selectedBot.value = fullBot;
         } catch (e) {
             console.error('[ChatBots] Initial refresh failed:', e);
         }
 
-        // Start polling every 5s
         pollTimer.value = window.setInterval(async () => {
             try {
                 const id = selectedBot.value?.chat_id;
                 if (!id) return;
                 const fullBot = await botStore.fetchChatBot(id);
-                // keep same selectedBot reference fresh
                 selectedBot.value = fullBot;
             } catch (e) {
-                // swallow errors to keep polling
             }
         }, 5000);
     }
@@ -99,37 +75,27 @@ onBeforeUnmount(() => {
     }
 });
 
-// Handle delete bot
 const deleteBot = async (bot: ChatBot) => {
     if (confirm(`Вы уверены, что хотите остановить бота "${bot.chat_id}"?`)) {
-        console.log('[ChatBots] Stopping bot:', bot.chat_id);
         await botStore.deleteChatBot(bot.chat_id);
         
-        // Обновляем список ботов с сервера
         await botStore.fetchAllChatBots();
-        console.log('[ChatBots] Bot list refreshed after stopping');
         
-        // Обновляем selectedBot, если это был выбранный бот
         if (selectedBot.value?.chat_id === bot.chat_id) {
-            // Находим обновленного бота в обновленном списке
             const updatedBot = botStore.chatBots.find(b => b.chat_id === bot.chat_id);
             if (updatedBot) {
                 selectedBot.value = updatedBot;
             }
         }
         
-        console.log('[ChatBots] Bot stopped:', bot.chat_id);
     }
 };
 
-// Format chat ID for WhatsApp
 const formatChatId = (phone: string): string => {
     if (!phone) return '';
     
-    // Remove all non-digit characters
     const digits = phone.replace(/\D/g, '');
     
-    // Add @c.us suffix if not present
     if (!phone.includes('@')) {
         return `${digits}@c.us`;
     }
@@ -137,7 +103,6 @@ const formatChatId = (phone: string): string => {
     return phone;
 };
 
-// Create bot
 const createBot = async () => {
     if (!newBotForm.value.chat_id || !newBotForm.value.object_id) {
         alert('Заполните все обязательные поля');
@@ -145,50 +110,36 @@ const createBot = async () => {
     }
     
     try {
-        // Format chat_id for WhatsApp
         const formattedData = {
             ...newBotForm.value,
             chat_id: formatChatId(newBotForm.value.chat_id),
         };
-        console.log('[ChatBots] Creating bot with data:', formattedData);
         await botStore.createChatBot(formattedData);
-        console.log('[ChatBots] Bot created successfully:', formattedData.chat_id);
         
-        // Закрываем модалку и очищаем форму
         showCreateBotModal.value = false;
         newBotForm.value = { chat_id: '', object_id: 0, bot_config_id: undefined };
         
-        // Обновляем список ботов с сервера
         await botStore.fetchAllChatBots();
-        console.log('[ChatBots] Bot list refreshed after creation');
     } catch (err) {
         console.error('[ChatBots] Failed to create bot:', err);
         alert('Ошибка создания бота: ' + (err as any)?.response?.data?.message || 'Неизвестная ошибка');
     }
 };
 
-// Toggle bot status
 const toggleBot = async (bot: ChatBot) => {
     try {
         if (bot.status === 'running') {
-            console.log('[ChatBots] Toggling bot to stop:', bot.chat_id);
             await botStore.deleteChatBot(bot.chat_id);
-            console.log('[ChatBots] Bot stopped via toggle:', bot.chat_id);
         } else {
-            console.log('[ChatBots] Toggling bot to start:', bot.chat_id);
             await botStore.createChatBot({
                 chat_id: bot.chat_id,
                 object_id: bot.object_id,
                 bot_config_id: bot.bot_config_id,
             });
-            console.log('[ChatBots] Bot started via toggle:', bot.chat_id);
         }
         
-        // Обновляем список ботов с сервера
         await botStore.fetchAllChatBots();
-        console.log('[ChatBots] Bot list refreshed after toggle');
         
-        // Обновляем selectedBot, если это был выбранный бот
         if (selectedBot.value?.chat_id === bot.chat_id) {
             const updatedBot = botStore.chatBots.find(b => b.chat_id === bot.chat_id);
             if (updatedBot) {
@@ -196,25 +147,19 @@ const toggleBot = async (bot: ChatBot) => {
             }
         }
         
-        console.log('[ChatBots] Bot state updated locally');
     } catch (err) {
         console.error('[ChatBots] Failed to toggle bot:', err);
         alert('Ошибка изменения статуса бота');
     }
 };
 
-// Stop all bots
 const stopAllBots = async () => {
     if (confirm('Остановить всех ботов?')) {
         try {
-            console.log('[ChatBots] Stopping all bots...');
             await botStore.stopAllBots();
             
-            // Обновляем список ботов с сервера
             await botStore.fetchAllChatBots();
-            console.log('[ChatBots] Bot list refreshed after stopping all');
             
-            // Обновляем selectedBot, если он был выбран
             if (selectedBot.value) {
                 const updatedBot = botStore.chatBots.find(b => b.chat_id === selectedBot.value?.chat_id);
                 if (updatedBot) {
@@ -222,25 +167,16 @@ const stopAllBots = async () => {
                 }
             }
             
-            console.log('[ChatBots] All bots stopped');
         } catch (err) {
             console.error('[ChatBots] Failed to stop all bots:', err);
         }
     }
 };
 
-// Send message
 const sendMessage = async (content: string) => {
     if (!selectedBot.value) return;
     
     try {
-        // Отправляем сообщение напрямую в чат с ботом
-        // await botStore.sendMessage(selectedBot.value.id, content);
-        console.log('[ChatBots] Sending message', {
-            to: selectedBot.value.chat_id,
-            content,
-        });
-        // Локально добавим в ленту, чтобы UI сразу отобразил
         botStore.messages.push({
             id: Date.now(),
             dialog_id: (botStore as any).currentChatBot?.dialog_id,
@@ -256,21 +192,6 @@ const sendMessage = async (content: string) => {
     }
 };
 
-// Watch for incoming/updated messages to log what we receive
-watch(
-    () => botStore.messages,
-    (newMessages, oldMessages) => {
-        const oldCount = Array.isArray(oldMessages) ? oldMessages.length : 0;
-        const newCount = Array.isArray(newMessages) ? newMessages.length : 0;
-        console.log('[ChatBots] Messages updated', {
-            chat_id: selectedBot.value?.chat_id,
-            oldCount,
-            newCount,
-            lastMessage: newCount > 0 ? newMessages[newCount - 1] : null,
-        });
-    },
-    { deep: true }
-);
 </script>
 
 <template>
@@ -297,14 +218,11 @@ watch(
         </div>
       </div>
 
-      <!-- Error message -->
       <div v-if="error" class="alert alert--danger">
         {{ error }}
       </div>
 
-      <!-- Main content -->
       <div class="chat-bots-content">
-        <!-- Bots list -->
         <div class="bots-section">
           <h2>Список ботов</h2>
           <div class="bots-grid">
@@ -321,7 +239,6 @@ watch(
           </div>
         </div>
 
-        <!-- Chat section -->
         <div v-if="selectedBot" class="chat-section">
           <div class="chat-header">
             <div class="chat-header__info">
@@ -336,13 +253,11 @@ watch(
           />
         </div>
 
-        <!-- Empty state -->
         <div v-else class="empty-chat">
           <p>Выберите бота для начала диалога</p>
         </div>
       </div>
 
-      <!-- Create bot modal -->
       <div v-if="showCreateBotModal" class="modal-overlay" @click.self="showCreateBotModal = false">
         <div class="modal" @click.stop>
           <div class="modal__header">
@@ -381,20 +296,3 @@ watch(
     </div>
   </MainLayout>
 </template>
-
-<style scoped lang="scss">
-.chat-bots-page {
-  overflow-x: hidden;
-}
-
-.bots-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 1rem;
-  overflow-x: hidden;
-}
-
-.chat-bot-card {
-  min-width: 0;
-}
-</style>
