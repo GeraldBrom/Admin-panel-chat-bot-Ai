@@ -1,3 +1,6 @@
+@use '../abstracts/variables' as *;
+@use '../abstracts/mixins' as *;
+
 // Chat Bot Card component styles
 .chat-bot-card {
     @include card;

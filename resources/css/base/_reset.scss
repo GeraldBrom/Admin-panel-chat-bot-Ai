@@ -1,4 +1,6 @@
 // Reset & Base
+@use '../abstracts/variables' as *;
+
 *,
 *::before,
 *::after {

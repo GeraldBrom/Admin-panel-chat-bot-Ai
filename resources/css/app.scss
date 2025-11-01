@@ -1,31 +1,33 @@
 // Admin Panel Chat Bot - Main Styles
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-// Abstracts
-@import 'abstracts/variables';
-@import 'abstracts/mixins';
+// Abstracts (must be first)
+@use 'abstracts/variables' as *;
+@use 'abstracts/mixins' as *;
 
 // Base
-@import 'base/reset';
-@import 'base/utilities';
+@use 'base/reset';
+@use 'base/utilities';
 
 // Components
-@import 'components/buttons';
-@import 'components/forms';
-@import 'components/bot-dialog';
-@import 'components/chat-bot-card';
-@import 'components/message-list';
-@import 'components/session-list';
+@use 'components/buttons';
+@use 'components/forms';
+@use 'components/bot-dialog';
+@use 'components/chat-bot-card';
+@use 'components/message-list';
+@use 'components/session-list';
 
 // Layouts
-@import 'layouts/main';
+@use 'layouts/main';
 
 // Pages
-@import 'pages/auth';
-@import 'pages/dashboard';
-@import 'pages/chatbots';
-@import 'pages/bot-management';
-@import 'pages/logs';
+@use 'pages/auth';
+@use 'pages/dashboard';
+@use 'pages/chatbots';
+@use 'pages/bot-management';
+@use 'pages/logs';
+
+// External fonts (after @use rules)
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 // App specific styles
 #app {
