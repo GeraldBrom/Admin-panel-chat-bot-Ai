@@ -72,24 +72,34 @@ class OpenAIService
 
             if ($response->successful()) {
                 $responseId = $response->json('id');
+                $rawOutput = $response->json('output') ?? [];
 
                 // Extract text from Responses API structure
                 $content = '';
-                $output = $response->json('output') ?? [];
+                $output = $rawOutput;
                 
-                // Новый формат: output[0].content = строка или массив с type: output_text
+                // Ищем элемент с type: 'message' в массиве output
                 if (is_array($output) && !empty($output)) {
-                    $firstOutput = $output[0] ?? [];
-                    $outputContent = $firstOutput['content'] ?? '';
+                    $messageOutput = null;
+                    foreach ($output as $item) {
+                        if (isset($item['type']) && $item['type'] === 'message') {
+                            $messageOutput = $item;
+                            break;
+                        }
+                    }
                     
-                    if (is_string($outputContent)) {
-                        $content = trim($outputContent);
-                    } elseif (is_array($outputContent)) {
-                        // Ищем output_text
-                        foreach ($outputContent as $item) {
-                            if (isset($item['type']) && $item['type'] === 'output_text' && isset($item['text'])) {
-                                $content = trim($item['text']);
-                                break;
+                    if ($messageOutput) {
+                        $outputContent = $messageOutput['content'] ?? '';
+                        
+                        if (is_string($outputContent)) {
+                            $content = trim($outputContent);
+                        } elseif (is_array($outputContent)) {
+                            // Ищем output_text в content
+                            foreach ($outputContent as $contentItem) {
+                                if (isset($contentItem['type']) && $contentItem['type'] === 'output_text' && isset($contentItem['text'])) {
+                                    $content = trim($contentItem['text']);
+                                    break;
+                                }
                             }
                         }
                     }
@@ -99,6 +109,14 @@ class OpenAIService
                     'prompt_tokens' => (int) ($response->json('usage.input_tokens') ?? $response->json('usage.prompt_tokens') ?? 0),
                     'completion_tokens' => (int) ($response->json('usage.output_tokens') ?? $response->json('usage.completion_tokens') ?? 0),
                 ];
+
+                if ($content === '') {
+                    Log::warning('OpenAI Responses API returned empty content', [
+                        'response_id' => $responseId,
+                        'output_structure' => $rawOutput,
+                        'usage' => $usage,
+                    ]);
+                }
 
                 return [
                     'content' => $content,
@@ -179,6 +197,14 @@ class OpenAIService
                     'prompt_tokens' => (int) ($response->json('usage.prompt_tokens') ?? 0),
                     'completion_tokens' => (int) ($response->json('usage.completion_tokens') ?? 0),
                 ];
+
+                if ($content === '') {
+                    Log::warning('OpenAI chat/completions returned empty content', [
+                        'response_id' => $responseId,
+                        'choices' => $response->json('choices'),
+                        'usage' => $usage,
+                    ]);
+                }
 
                 return [
                     'content' => $content,

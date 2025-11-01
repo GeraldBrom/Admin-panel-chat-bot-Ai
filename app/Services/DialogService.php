@@ -168,89 +168,114 @@ class DialogService
      */
     public function processIncomingMessage(string $chatId, string $messageText, array $meta = []): void
     {
-        Log::info("Processing incoming message from chatId: {$chatId}", [
-            'message' => $messageText,
-        ]);
+        try {
+            Log::info("Processing incoming message from chatId: {$chatId}", [
+                'message' => $messageText,
+            ]);
 
-        // Get session
-        $session = BotSession::where('chat_id', $chatId)
-            ->where('status', 'running')
-            ->first();
+            // Get session
+            $session = BotSession::where('chat_id', $chatId)
+                ->where('status', 'running')
+                ->first();
 
-        if (!$session) {
-            Log::warning("No active session for chatId: {$chatId}");
-            return;
-        }
+            if (!$session) {
+                Log::warning("No active session for chatId: {$chatId}");
+                return;
+            }
 
-        // Get dialog
-        $dialog = Dialog::getOrCreate($chatId);
+            // Get dialog
+            $dialog = Dialog::getOrCreate($chatId);
 
-        // Save user message
-        Message::create([
-            'dialog_id' => $dialog->dialog_id,
-            'role' => 'user',
-            'content' => $messageText,
-            'meta' => $meta,
-        ]);
-
-        // Build history for single LLM call
-        $config = $session->bot_config_id ? BotConfig::find($session->bot_config_id) : null;
-        $systemPrompt = $config?->prompt ?? 'Ты - профессионал ИИ-ассистент компании Capital Mars. Отвечай кратко, по делу.';
-        $temperature = $config?->temperature ? (float) $config->temperature : null;
-        $maxTokens = $config?->max_tokens;
-
-        $historyMessages = Message::where('dialog_id', $dialog->dialog_id)
-            ->orderBy('created_at')
-            ->get(['role', 'content']);
-
-        $history = $historyMessages->map(function ($m) {
-            return [
-                'role' => $m->role,
-                'content' => $m->content,
-            ];
-        })->values()->all();
-
-        $vectorIds = [];
-        if ($config?->vector_store_id_main) {
-            $vectorIds[] = $config->vector_store_id_main;
-        }
-        if ($config?->vector_store_id_objections) {
-            $vectorIds[] = $config->vector_store_id_objections;
-        }
-
-        // Prefer Responses API with RAG if vector stores configured
-        if (!empty($vectorIds)) {
-            $result = $this->openAIService->chatWithRag(
-                $systemPrompt,
-                $history,
-                $temperature,
-                $maxTokens,
-                $vectorIds
-            );
-        } else {
-            $result = $this->openAIService->chat(
-                $systemPrompt,
-                $history,
-                $temperature,
-                $maxTokens
-            );
-        }
-        $assistantReply = $result['content'] ?? '';
-        $responseId = $result['response_id'] ?? null;
-        $usage = $result['usage'] ?? ['prompt_tokens' => 0, 'completion_tokens' => 0];
-
-        if ($assistantReply !== '') {
-            // Send via provider
-            $this->sendMessageWithDelay($chatId, $assistantReply, 1200);
-
-            // Save assistant message with previous_response_id
+            // Save user message
             Message::create([
                 'dialog_id' => $dialog->dialog_id,
-                'role' => 'assistant',
-                'content' => $assistantReply,
-                'previous_response_id' => $responseId,
-                'tokens_in' => $usage['prompt_tokens'] ?? 0,
-                'tokens_out' => $usage['completion_tokens'] ?? 0,
+                'role' => 'user',
+                'content' => $messageText,
+                'meta' => $meta,
+            ]);
+
+            // Build history for single LLM call
+            $config = $session->bot_config_id ? BotConfig::find($session->bot_config_id) : null;
+            $systemPrompt = $config?->prompt ?? 'Ты - профессионал ИИ-ассистент компании Capital Mars. Отвечай кратко, по делу.';
+            $temperature = $config?->temperature ? (float) $config->temperature : null;
+            $maxTokens = $config?->max_tokens;
+
+            $historyMessages = Message::where('dialog_id', $dialog->dialog_id)
+                ->orderBy('created_at')
+                ->get(['role', 'content']);
+
+            $history = $historyMessages->map(function ($m) {
+                return [
+                    'role' => $m->role,
+                    'content' => $m->content,
+                ];
+            })->values()->all();
+
+            $vectorIds = [];
+            if ($config?->vector_store_id_main) {
+                $vectorIds[] = $config->vector_store_id_main;
+            }
+            if ($config?->vector_store_id_objections) {
+                $vectorIds[] = $config->vector_store_id_objections;
+            }
+
+            // Prefer Responses API with RAG if vector stores configured
+            $startTime = microtime(true);
+            if (!empty($vectorIds)) {
+                $result = $this->openAIService->chatWithRag(
+                    $systemPrompt,
+                    $history,
+                    $temperature,
+                    $maxTokens,
+                    $vectorIds
+                );
+            } else {
+                $result = $this->openAIService->chat(
+                    $systemPrompt,
+                    $history,
+                    $temperature,
+                    $maxTokens
+                );
+            }
+            $elapsedTime = round((microtime(true) - $startTime) * 1000); // ms
+            
+            $assistantReply = $result['content'] ?? '';
+            $responseId = $result['response_id'] ?? null;
+            $usage = $result['usage'] ?? ['prompt_tokens' => 0, 'completion_tokens' => 0];
+
+            Log::info("OpenAI API call completed", [
+                'chatId' => $chatId,
+                'elapsed_ms' => $elapsedTime,
+                'response_length' => mb_strlen($assistantReply),
+                'tokens' => $usage,
+            ]);
+
+            if ($assistantReply !== '') {
+                // Send via provider
+                $this->sendMessageWithDelay($chatId, $assistantReply, 1200);
+
+                // Save assistant message with previous_response_id
+                Message::create([
+                    'dialog_id' => $dialog->dialog_id,
+                    'role' => 'assistant',
+                    'content' => $assistantReply,
+                    'previous_response_id' => $responseId,
+                    'tokens_in' => $usage['prompt_tokens'] ?? 0,
+                    'tokens_out' => $usage['completion_tokens'] ?? 0,
+                ]);
+
+                Log::info("Message processed and sent to chatId: {$chatId}", [
+                    'response_length' => mb_strlen($assistantReply),
+                    'tokens' => $usage,
+                ]);
+            } else {
+                Log::warning("Empty assistant reply for chatId: {$chatId}");
+            }
+        } catch (\Throwable $e) {
+            Log::error("Failed to process incoming message for chatId: {$chatId}", [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'message' => $messageText,
             ]);
         }
     }

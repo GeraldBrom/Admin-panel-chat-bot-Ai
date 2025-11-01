@@ -64,6 +64,8 @@ class ProcessGreenApiWebhook implements ShouldQueue
         } catch (\Throwable $e) {
             Log::error('[GreenAPI Webhook Job] Failed', [
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'payload' => $this->payload,
             ]);
         }
     }
