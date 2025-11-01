@@ -128,7 +128,11 @@ https://bot.capitalmars.com/green-api/webhook
 https://bot.capitalmars.com/api/greenapi/webhook
 ```
 
-**Важно:** URL должен быть указан БЕЗ trailing slash (без `/` в конце)
+**⚠️ КРИТИЧЕСКИ ВАЖНО:** 
+- URL должен быть указан **БЕЗ** trailing slash (без `/` в конце)
+- ✅ Правильно: `https://bot.capitalmars.com/green-api/webhook`
+- ❌ Неправильно: `https://bot.capitalmars.com/green-api/webhook/`
+- Webhook endpoints исключены из CSRF проверки в `bootstrap/app.php`
 
 ---
 
@@ -160,11 +164,39 @@ No active session for chatId: XXXXX@c.us
 
 ## 🐛 Troubleshooting
 
+### Проблема: Ошибка 419 Page Expired ⚠️
+**Симптомы:** curl возвращает HTML с "419 Page Expired"
+
+**Причина:** Laravel блокирует webhook из-за CSRF защиты
+
+**Решение:**
+1. Убедитесь, что в `bootstrap/app.php` добавлено исключение для webhook:
+```php
+->withMiddleware(function (Middleware $middleware): void {
+    $middleware->validateCsrfTokens(except: [
+        '/green-api/webhook',
+        '/green-api/webhook/*',
+        '/api/greenapi/webhook',
+        '/api/greenapi/webhook/*',
+    ]);
+})
+```
+
+2. Очистите кеш на сервере:
+```bash
+php artisan config:clear
+php artisan cache:clear
+php artisan route:clear
+```
+
+3. Используйте URL без trailing slash: `/webhook` а не `/webhook/`
+
 ### Проблема: Webhook не приходит
 1. Проверьте настройки Green API
 2. Проверьте firewall/настройки сервера
 3. Убедитесь, что SSL сертификат валиден
 4. Проверьте логи веб-сервера (nginx/apache)
+5. **Убедитесь, что URL без `/` в конце**
 
 ### Проблема: Webhook приходит, но не обрабатывается
 1. Проверьте очереди Laravel: `php artisan queue:work`

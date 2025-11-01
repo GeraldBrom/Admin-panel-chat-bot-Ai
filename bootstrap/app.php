@@ -13,7 +13,13 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        // Исключаем webhook endpoints из CSRF проверки
+        $middleware->validateCsrfTokens(except: [
+            '/green-api/webhook',
+            '/green-api/webhook/*',
+            '/api/greenapi/webhook',
+            '/api/greenapi/webhook/*',
+        ]);
     })
     ->withSchedule(function (Schedule $schedule): void {
         // Polling для локальной разработки (на продакшене используется webhook)
