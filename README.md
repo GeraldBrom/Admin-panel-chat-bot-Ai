@@ -1,45 +1,93 @@
 # Админ-панель для управления чат-ботами
 
-Админ-панель на Laravel 12 + Vue 3 + TypeScript + SCSS для управления чат-ботами.
+ Админ-панель на Laravel 12 + Vue 3 + TypeScript + SCSS для управления интеллектуальными WhatsApp чат-ботами с интеграцией OpenAI и RAG (Retrieval Augmented Generation).
 
 🌐 **Production URL**: [https://bot.capitalmars.com](https://bot.capitalmars.com)
 
-## Технологический стек
+## ✨ Основные возможности
 
-- **Backend**: Laravel 12 (PHP 8.3)
-- **Frontend**: Vue 3 с Composition API
-- **TypeScript**: Полная поддержка типизации
-- **SCSS**: Препроцессор стилей
-- **Сборка**: Vite
-- **База данных**: SQLite (по умолчанию)
+- 🤖 **Управление чат-ботами**: Создание, запуск, остановка и мониторинг WhatsApp ботов
+- 🧠 **OpenAI GPT-5 интеграция**: Продвинутая AI-логика с поддержкой RAG
+- 📚 **Векторные хранилища**: База знаний для контекстных ответов ботов
+- 💬 **WhatsApp интеграция**: Полная интеграция через Green API
+- ⚙️ **Гибкая настройка**: Управление промптами, температурой, токенами и моделями
+- 📊 **Логи и мониторинг**: Просмотр, скачивание и анализ логов
+- 🔐 **Безопасная аутентификация**: Laravel Sanctum с поддержкой нескольких устройств
+- 🎨 **Современный UI**: Адаптивный интерфейс на Vue 3 + TypeScript
+
+## 🛠 Технологический стек
+
+### Backend
+- **Laravel 12** (PHP 8.2+)
+- **Laravel Sanctum 4.2** (аутентификация API)
+- **OpenAI PHP Laravel 0.17.1** (интеграция с OpenAI)
+- **Guzzle HTTP Client 7.10** (HTTP-запросы)
+- **MySQL/SQLite** (база данных)
+
+### Frontend
+- **Vue 3.5.22** (Composition API)
+- **TypeScript 5.9.3** (строгая типизация)
+- **Vue Router 4.6.3** (роутинг SPA)
+- **Pinia 3.0.3** (state management)
+- **SCSS/Sass 1.93.2** (препроцессор стилей)
+- **Vite 7.0.7** (сборка и HMR)
+- **Axios 1.11.0** (HTTP-клиент)
+
+### Интеграции
+- **OpenAI API** (GPT-5 с RAG и File Search)
+- **Green API** (WhatsApp Business API)
 
 ## Установка и запуск
 
 ### Требования
 
-- PHP 8.3+
-- Composer
-- Node.js 18+ и npm
-- OSPanel или аналогичный локальный сервер
+- **PHP 8.2+** с расширениями: `openssl`, `pdo`, `pdo_mysql`, `mbstring`, `tokenizer`, `xml`, `ctype`, `json`, `fileinfo`
+- **Composer 2.0+**
+- **Node.js 18+** и npm
+- **MySQL 5.7+** или **SQLite**
+- **OSPanel** (для Windows) или аналогичный локальный сервер
 
-### Установка зависимостей
+### Быстрая установка
 
-```bash
-# Backend зависимости
+# 1. Backend зависимости
 composer install
 
-# Frontend зависимости
+# 2. Frontend зависимости
 npm install
-```
 
+# 3. Настройка окружения
+cp .env.example .env
+php artisan key:generate
+
+# 4. Миграции
+php artisan migrate
+
+# 5. Запуск сидера
+php artisan db:seed
+
+# 6. Сборка фронтенда
+npm run build(Для прод версии) / npm run dev (Для локальной разработки)
+```
 ### Настройка окружения
 
-```bash
-# Скопировать файл окружения
-cp .env.example .env
+Создайте файл `.env` и настройте основные параметры:
 
-# Сгенерировать ключ приложения
-php artisan key:generate
+```env
+# Данные подключения GreenApi
+API_URL=api.green-api.com
+MEDIA_URL=media.green.api
+ID_INSTANCE=id
+API_TOKEN_INSTANCE=api_token
+
+# GPT
+OPENAI_API_KEY=openai_api_key
+
+# Управление прокси
+USE_PROXY=false
+
+# SOCKS5 Proxy Settings (опционально, для обхода региональных ограничений OpenAI)
+PROXY_HOST=ip_proxy
+PROXY_PORT=port_proxy
 ```
 
 ### База данных
@@ -47,438 +95,255 @@ php artisan key:generate
 Проект настроен на использование двух баз данных:
 
 1. **MySQL локальная** (AdminPanelChatBot) - для админ-панели
-   - Требует запущенный MySQL в OSPanel
-   - Или можно переключить на SQLite (см. ниже)
    
 2. **MySQL удаленная** (myhomeday) - для данных чат-ботов
-   - Уже подключена и работает ✓
-   - 263 таблицы доступны
 
 **Настройка баз данных в `.env`:**
 
-```env
-# Основная БД для админ-панели (требует запущенный MySQL)
-DB_CONNECTION=mysql
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_DATABASE=AdminPanelChatBot
-DB_USERNAME=root
-DB_PASSWORD=root
-
-# Удаленная БД для данных чат-ботов (работает)
-REMOTE_DB_HOST=185.175.46.117
-REMOTE_DB_PORT=3306
-REMOTE_DB_DATABASE=myhomeday
-REMOTE_DB_USERNAME=admin
-REMOTE_DB_PASSWORD="A!d2m@in"
-
-# Сессии и кэш используют файлы (не требуют БД)
-SESSION_DRIVER=file
-CACHE_STORE=file
-QUEUE_CONNECTION=sync
-```
-
-**Альтернатива: использовать SQLite для админ-панели**
-
-Если не хотите запускать MySQL локально, измените в `.env`:
-```env
-DB_CONNECTION=sqlite
-```
-База SQLite уже создана в `database/database.sqlite`.
-
-**Использование подключений в коде:**
-
-```php
-// Основная БД (по умолчанию - AdminPanelChatBot)
-$users = DB::table('users')->get();
-User::all();
-
-// Удаленная БД для чат-ботов (myhomeday)
-$chats = DB::connection('mysql_remote')->table('chats')->get();
-
-// Модель для таблиц из удаленной БД
-class Chat extends Model {
-    protected $connection = 'mysql_remote';
-    protected $table = 'chats';
-}
-
-// Пример запроса
-Chat::where('status', 'active')->get();
-```
-
 ### Сборка фронтенда
 
-Для разработки (с автоперезагрузкой):
 ```bash
+Для разработки (с автоперезагрузкой):
+
 npm run dev
-```
 
 Для production:
 ```bash
 npm run build
 ```
 
-### Запуск сервера
-
-В отдельном терминале запустите Laravel сервер:
+### Запуск проекта
 
 ```bash
+# Терминал 1: Laravel сервер
 php artisan serve
-```
+
+# Терминал 2: Vite dev server
+npm run dev
 
 Проект будет доступен по адресу: `http://localhost:8000`
 
-## Структура проекта
+## 📁 Структура проекта
 
 ```
 ├── app/
-│   ├── Http/Controllers/    # Контроллеры Laravel
-│   ├── Models/              # Модели Eloquent
-│   └── Providers/           # Service Providers
+│   ├── Console/
+│   │   └── Commands/              # Artisan команды
+│   ├── Http/
+│   │   ├── Controllers/           # API контроллеры
+│   │   │   ├── AuthController.php       # Аутентификация
+│   │   │   ├── BotController.php        # Управление ботами
+│   │   │   ├── BotConfigController.php  # Конфигурации ботов
+│   │   │   ├── LogController.php        # Логи
+│   │   │   └── GreenApiWebhookController.php  # Webhook WhatsApp
+│   │   ├── Requests/              # Form Requests
+│   │   └── Resources/             # API Resources
+│   ├── Models/                    # Eloquent модели
+│   │   ├── BotConfig.php          # Конфигурация бота
+│   │   ├── BotSession.php         # Сессии бота
+│   │   ├── Dialog.php             # Диалоги
+│   │   ├── Message.php            # Сообщения
+│   │   ├── Fact.php               # Факты из контекста
+│   │   └── User.php               # Пользователи
+│   ├── Services/                  # Бизнес-логика
+│   │   ├── OpenAIService.php      # Интеграция OpenAI
+│   │   ├── GreenApiService.php    # Интеграция WhatsApp
+│   │   ├── DialogService.php      # Управление диалогами
+│   │   └── AuthService.php        # Логика авторизации
+│   └── Repositories/              # Data Access Layer
+│
 ├── resources/
 │   ├── js/
-│   │   ├── app.ts           # Точка входа Vue
-│   │   ├── App.vue          # Корневой компонент
-│   │   └── bootstrap.ts     # Инициализация axios
+│   │   ├── app.ts                 # Точка входа
+│   │   ├── App.vue                # Корневой компонент
+│   │   ├── bootstrap.ts           # Инициализация axios
+│   │   ├── components/            # Vue компоненты
+│   │   │   ├── BotDialog.vue          # Диалог с ботом
+│   │   │   ├── ChatBotCard.vue        # Карточка бота
+│   │   │   ├── MessageList.vue        # Список сообщений
+│   │   │   └── SessionList.vue        # Список сессий
+│   │   ├── views/                 # Страницы
+│   │   │   ├── Dashboard.vue          # Главная панель
+│   │   │   ├── Login.vue              # Авторизация
+│   │   │   ├── BotManagement.vue      # Управление ботами
+│   │   │   ├── ChatBots.vue           # Список ботов
+│   │   │   └── Logs.vue               # Логи системы
+│   │   ├── layouts/               # Макеты
+│   │   ├── router/                # Vue Router
+│   │   ├── stores/                # Pinia stores
+│   │   ├── services/              # API сервисы
+│   │   └── types/                 # TypeScript типы
+│   │
 │   ├── css/
-│   │   └── app.scss         # Основные стили
-│   └── views/               # Blade шаблоны
+│   │   ├── app.scss               # Основные стили
+│   │   ├── abstracts/             # Переменные, миксины
+│   │   ├── base/                  # Базовые стили
+│   │   ├── components/            # Стили компонентов
+│   │   ├── layouts/               # Стили макетов
+│   │   └── pages/                 # Стили страниц
+│   │
+│   └── views/
+│       └── index.blade.php        # Основной HTML шаблон
+│
 ├── routes/
-│   └── web.php              # Web маршруты
-├── vite.config.js           # Конфигурация Vite
-├── tsconfig.json            # Конфигурация TypeScript
-└── package.json             # Frontend зависимости
+│   ├── api.php                    # API маршруты
+│   ├── web.php                    # Web маршруты
+│   └── console.php                # Console команды
+│
+├── database/
+│   ├── migrations/                # Миграции БД
+│   └── seeders/                   # Сидеры
+│
+├── config/                        # Конфигурации Laravel
+├── vite.config.js                 # Конфигурация Vite
+├── tsconfig.json                  # Конфигурация TypeScript
+├── composer.json                  # PHP зависимости
+└── package.json                   # JS зависимости
 ```
 
-## Разработка
+## 🚀 Использование
 
-### Создание компонентов Vue
+### API эндпоинты
 
-Создавайте компоненты в `resources/js/components/`:
-
-```vue
-<script setup lang="ts">
-// TypeScript код
-</script>
-
-<template>
-  <div>
-    <!-- HTML разметка -->
-  </div>
-</template>
-
-<style scoped>
-/* SCSS стили */
-</style>
+#### Аутентификация
+```http
+POST /api/auth/login          # Вход в систему
+POST /api/auth/logout         # Выход из системы
+POST /api/auth/logout-all     # Выход из всех устройств
+GET  /api/auth/me             # Получить текущего пользователя
 ```
 
-### Импорт компонентов
-
-```typescript
-import ComponentName from '@/components/ComponentName.vue'
+#### Управление ботами
+```http
+GET    /api/bots              # Список активных ботов
+POST   /api/bots/start        # Запустить бота для чата
+POST   /api/bots/stop-all     # Остановить все боты
+GET    /api/bots/{chatId}     # Информация о боте
+DELETE /api/bots/{chatId}     # Остановить бота
 ```
 
-### API запросы
-
-Axios доступен глобально через `window.axios`:
-
-```typescript
-// GET запрос
-const response = await axios.get('/api/endpoint')
-
-// POST запрос
-const response = await axios.post('/api/endpoint', { data })
+#### Конфигурации ботов
+```http
+GET    /api/bot-configs       # Список конфигураций
+POST   /api/bot-configs       # Создать конфигурацию
+PUT    /api/bot-configs/{id}  # Обновить конфигурацию
+DELETE /api/bot-configs/{id}  # Удалить конфигурацию
 ```
 
-## Скрипты npm
-
-- `npm run dev` - Запуск Vite dev сервера с HMR
-- `npm run build` - Сборка production версии
-- `npm run type-check` - Проверка типов TypeScript
-
-## Полезные команды Laravel
-
-- `php artisan migrate` - Выполнить миграции
-- `php artisan make:model` - Создать модель
-- `php artisan make:controller` - Создать контроллер
-- `php artisan make:migration` - Создать миграцию
-- `php artisan tinker` - Интерактивная оболочка Laravel
-
-## 🚀 Деплой на production сервер
-
-### Требования для production сервера
-
-- PHP 8.3+ с расширениями: `openssl`, `pdo`, `pdo_mysql`, `mbstring`, `tokenizer`, `xml`, `ctype`, `json`, `fileinfo`
-- MySQL 5.7+ или MariaDB 10.3+
-- Node.js 18+ и npm (для сборки фронтенда)
-- Composer 2.0+
-- Nginx или Apache с mod_rewrite
-- SSL сертификат (Let's Encrypt или коммерческий)
-
-### Предварительная подготовка
-
-1. **Создайте базу данных MySQL для админ-панели:**
-```sql
-CREATE DATABASE AdminPanelChatBot CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'admin'@'localhost' IDENTIFIED BY 'your_secure_password';
-GRANT ALL PRIVILEGES ON AdminPanelChatBot.* TO 'admin'@'localhost';
-FLUSH PRIVILEGES;
+#### Логи
+```http
+GET  /api/logs                # Получить логи
+GET  /api/logs/download       # Скачать логи
+POST /api/logs/clear          # Очистить логи
 ```
 
-2. **Клонируйте проект на сервер:**
-```bash
-git clone <your-repo-url> /var/www/bot.capitalmars.com
-cd /var/www/bot.capitalmars.com
+#### Webhooks (публичные)
+```http
+POST /api/greenapi/webhook    # Webhook для Green API
+GET  /api/greenapi/last       # Последние сообщения
 ```
 
-3. **Установите зависимости:**
-```bash
-# Backend
-composer install --optimize-autoloader --no-dev
+### Настройка конфигурации бота
 
-# Frontend
-npm install
-npm run build
-```
+Конфигурация бота включает следующие параметры:
 
-4. **Настройте окружение:**
-```bash
-cp .env.example .env
-php artisan key:generate
-```
-
-5. **Настройте `.env` для production:**
-```env
-APP_NAME="WhatsApp Bot Admin Panel"
-APP_ENV=production
-APP_DEBUG=false
-APP_URL=https://bot.capitalmars.com
-
-# База данных
-DB_CONNECTION=mysql
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_DATABASE=AdminPanelChatBot
-DB_USERNAME=admin
-DB_PASSWORD=your_secure_password
-
-# Удаленная БД для чат-ботов
-REMOTE_DB_HOST=185.175.46.117
-REMOTE_DB_PORT=3306
-REMOTE_DB_DATABASE=myhomeday
-REMOTE_DB_USERNAME=admin
-REMOTE_DB_PASSWORD="A!d2m@in"
-
-# Логирование
-LOG_CHANNEL=daily
-LOG_LEVEL=error
-
-# Кэш и сессии (рекомендуется Redis для production)
-CACHE_STORE=redis
-SESSION_DRIVER=redis
-QUEUE_CONNECTION=redis
-
-# Redis (если используется)
-REDIS_HOST=127.0.0.1
-REDIS_PASSWORD=null
-REDIS_PORT=6379
-
-# Sanctum domains
-SANCTUM_STATEFUL_DOMAINS=bot.capitalmars.com
-
-# Green API (WhatsApp)
-API_URL=https://1105.api.green-api.com
-ID_INSTANCE=your_instance_id
-API_TOKEN_INSTANCE=your_api_token
-
-# OpenAI
-OPENAI_API_KEY=your_openai_api_key
-VECTOR_STORE_ID=your_vector_store_id
-USE_PROXY=false
-```
-
-6. **Выполните миграции:**
-```bash
-php artisan migrate --force
-php artisan db:seed --force
-```
-
-7. **Оптимизируйте приложение:**
-```bash
-php artisan config:cache
-php artisan route:cache
-php artisan view:cache
-php artisan event:cache
-```
-
-8. **Настройте права доступа:**
-```bash
-chown -R www-data:www-data /var/www/bot.capitalmars.com
-chmod -R 755 /var/www/bot.capitalmars.com
-chmod -R 775 /var/www/bot.capitalmars.com/storage
-chmod -R 775 /var/www/bot.capitalmars.com/bootstrap/cache
-```
-
-### Настройка Nginx
-
-Создайте конфигурационный файл `/etc/nginx/sites-available/bot.capitalmars.com`:
-
-```nginx
-server {
-    listen 80;
-    listen [::]:80;
-    server_name bot.capitalmars.com;
-    return 301 https://$server_name$request_uri;
-}
-
-server {
-    listen 443 ssl http2;
-    listen [::]:443 ssl http2;
-    server_name bot.capitalmars.com;
-    root /var/www/bot.capitalmars.com/public;
-
-    index index.php index.html index.htm;
-
-    charset utf-8;
-
-    # SSL сертификат
-    ssl_certificate /etc/letsencrypt/live/bot.capitalmars.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/bot.capitalmars.com/privkey.pem;
-    ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_ciphers HIGH:!aNULL:!MD5;
-
-    # Безопасность
-    add_header X-Frame-Options "SAMEORIGIN" always;
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header X-XSS-Protection "1; mode=block" always;
-
-    location / {
-        try_files $uri $uri/ /index.php?$query_string;
-    }
-
-    location = /favicon.ico { access_log off; log_not_found off; }
-    location = /robots.txt  { access_log off; log_not_found off; }
-
-    error_page 404 /index.php;
-
-    location ~ \.php$ {
-        fastcgi_pass unix:/var/run/php/php8.3-fpm.sock;
-        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
-        include fastcgi_params;
-        fastcgi_hide_header X-Powered-By;
-    }
-
-    location ~ /\.(?!well-known).* {
-        deny all;
-    }
-
-    # Кэширование статических файлов
-    location ~* \.(jpg|jpeg|png|gif|ico|css|js|svg|woff|woff2|ttf|eot)$ {
-        expires 1y;
-        add_header Cache-Control "public, immutable";
-    }
+```json
+{
+  "name": "Название бота",
+  "platform": "whatsapp",
+  "prompt": "Системный промпт для GPT",
+  "scenario_description": "Описание сценария работы",
+  "temperature": 0.7,
+  "max_tokens": 500,
+  "openai_model": "gpt-5-2025-08-07",
+  "openai_service_tier": "flex",
+  "kickoff_message": "Приветственное сообщение",
+  "vector_stores": [
+    "vs_xxx",
+    "vs_yyy"
+  ]
 }
 ```
 
-Активируйте сайт:
-```bash
-ln -s /etc/nginx/sites-available/bot.capitalmars.com /etc/nginx/sites-enabled/
-nginx -t
-systemctl reload nginx
-```
+**Параметры:**
+- `temperature` (0-2): Креативность ответов. 0 = строгие, 2 = креативные
+- `max_tokens`: Максимальная длина ответа
+- `openai_model`: Модель GPT (gpt-5-2025-08-07, gpt-4o и др.)
+- `openai_service_tier`: Уровень сервиса (`flex`, `standard`)
+- `vector_stores`: Массив ID векторных хранилищ для RAG
 
-### Настройка Apache (альтернатива)
+## 📋 Полезные команды
 
-Если используете Apache, создайте `.htaccess` в `public/` (уже должен быть):
-
-```apache
-<IfModule mod_rewrite.c>
-    RewriteEngine On
-    RewriteRule ^(.*)$ public/$1 [L]
-</IfModule>
-```
-
-И настройте виртуальный хост с `DocumentRoot` указывающим на `public/` директорию.
-
-### Настройка Supervisor для очередей (опционально)
-
-Если используете очереди, создайте конфигурацию Supervisor:
-
-```ini
-[program:bot-capitalmars-queue]
-process_name=%(program_name)s_%(process_num)02d
-command=php /var/www/bot.capitalmars.com/artisan queue:work --sleep=3 --tries=3
-autostart=true
-autorestart=true
-user=www-data
-numprocs=2
-redirect_stderr=true
-stdout_logfile=/var/www/bot.capitalmars.com/storage/logs/queue.log
-stopwaitsecs=3600
-```
-
-### Проверка после деплоя
-
-1. Проверьте доступность сайта: `https://bot.capitalmars.com`
-2. Проверьте API: `https://bot.capitalmars.com/api/auth/login`
-3. Проверьте логи: `tail -f storage/logs/laravel.log`
-4. Проверьте статус очередей (если используются): `php artisan queue:work`
-
-### Команды для обновления на production
+### NPM скрипты
 
 ```bash
-# После обновления кода
-git pull origin main
-composer install --optimize-autoloader --no-dev
-npm install
-npm run build
+npm run dev          # Запуск Vite dev сервера с HMR
+npm run build        # Сборка production версии
+npm run type-check   # Проверка типов TypeScript
+```
+### Laravel Artisan
 
-# Очистка и пересборка кэша
-php artisan config:clear
-php artisan route:clear
-php artisan view:clear
-php artisan cache:clear
-
-# Применение миграций
-php artisan migrate --force
-
-# Оптимизация
-php artisan config:cache
-php artisan route:cache
-php artisan view:cache
-
-# Перезапуск очередей (если используются)
-php artisan queue:restart
+**База данных:**
+```bash
+php artisan migrate              # Выполнить миграции
+php artisan migrate:fresh        # Пересоздать БД
+php artisan db:seed              # Запустить сидеры
+php artisan migrate:fresh --seed # Пересоздать БД + сидеры
 ```
 
-### Безопасность
+**Кэш и оптимизация:**
+```bash
+php artisan config:cache   # Кэшировать конфигурацию
+php artisan route:cache    # Кэшировать маршруты
+php artisan view:cache     # Кэшировать представления
+php artisan cache:clear    # Очистить кэш приложения
+php artisan config:clear   # Очистить кэш конфигурации
+php artisan route:clear    # Очистить кэш маршрутов
+php artisan view:clear     # Очистить кэш представлений
 
-- ✅ Используйте HTTPS (SSL сертификат)
-- ✅ Установите `APP_DEBUG=false` в production
-- ✅ Используйте сильные пароли для БД
-- ✅ Регулярно обновляйте зависимости: `composer update` и `npm update`
-- ✅ Настройте firewall (ufw/firewalld)
-- ✅ Регулярно создавайте резервные копии базы данных
-- ✅ Настройте автоматические логи
+Супер команда по очистке
 
-### Мониторинг
+npm run clearAll           # Очистить все кэши Laravel
+```
+**Отладка:**
+```bash
+php artisan tinker             # Интерактивная оболочка
+php artisan pail               # Логи в реальном времени
+php artisan route:list         # Список всех маршрутов
+php artisan about              # Информация о приложении
+```
+## 🔧 Архитектура и паттерны
 
-Рекомендуется настроить мониторинг:
-- Логи Laravel: `storage/logs/laravel.log`
-- Логи Nginx/Apache
-- Мониторинг доступности сервера (UptimeRobot, Pingdom и т.д.)
-- Мониторинг производительности (New Relic, DataDog и т.д.)
+### Backend архитектура
 
-## Дальнейшая разработка
+Проект использует чистую архитектуру с разделением ответственности:
 
-Рекомендуется добавить:
+**Controllers** → **Services** → **Repositories** → **Models**
 
-1. **Роутинг**: Vue Router для SPA навигации ✅ (уже реализован)
-2. **State Management**: Pinia для управления состоянием ✅ (уже реализован)
-3. **UI Kit**: Element Plus, Vuetify или подобный
-4. **Авторизация**: Laravel Sanctum ✅ (уже реализовано)
-5. **Тестирование**: PHPUnit + Vitest
+- **Controllers**: Обработка HTTP-запросов и валидация
+- **Services**: Бизнес-логика приложения
+- **Repositories**: Доступ к данным (опционально)
+- **Models**: Eloquent модели с отношениями
 
-## Лицензия
+### OpenAI интеграция
 
-MIT
+Проект использует два подхода для работы с OpenAI:
+
+1. **Chat Completions API** - стандартный подход для диалогов
+2. **Responses API + RAG** - продвинутый подход с File Search из векторных хранилищ
+
+**Особенности:**
+- Автоматический fallback с Responses API на Chat Completions при таймаутах
+- Поддержка нескольких векторных хранилищ для RAG
+- Настройка моделей, температуры и service tier
+- Логирование всех запросов и ответов
+
+### WhatsApp интеграция
+
+Используется **Green API** для работы с WhatsApp Business:
+
+- Webhook для получения входящих сообщений
+- Отправка исходящих сообщений
+- Управление сессиями чатов
+- DNS резолвинг для стабильности соединения
+
