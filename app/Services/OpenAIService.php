@@ -24,7 +24,19 @@ class OpenAIService
 
     /**
      * Чат с использованием Responses API и File Search (RAG)
-     * Возвращает массив: ['content' => string, 'response_id' => string|null, 'usage' => ['prompt_tokens'=>int,'completion_tokens'=>int]]
+     * 
+     * OpenAI File Search автоматически ищет релевантные документы в указанных Vector Stores
+     * и использует их для генерации более точных ответов на основе ваших данных.
+     * 
+     * @param string $systemPrompt Системный промпт для ассистента
+     * @param array $history История диалога [['role' => 'user|assistant', 'content' => '...']]
+     * @param float|null $temperature Температура (0.0-2.0) - контролирует случайность ответов
+     * @param int|null $maxTokens Максимальное количество токенов в ответе
+     * @param array $vectorStoreIds Массив ID векторных хранилищ (например: ['vs_abc123', 'vs_xyz789'])
+     * @param string|null $model Модель OpenAI (по умолчанию gpt-5-2025-08-07)
+     * @param string|null $serviceTier Уровень сервиса: 'auto', 'default', 'flex' (по умолчанию 'flex')
+     * 
+     * @return array ['content' => string, 'response_id' => string|null, 'usage' => ['prompt_tokens'=>int,'completion_tokens'=>int]]
      */
     public function chatWithRag(
         string $systemPrompt,
@@ -38,9 +50,7 @@ class OpenAIService
         
         $input = [];
         
-        if (!empty($vectorStoreIds)) {
-            $systemPrompt .= "\n\nИспользуй знания из следующих векторных баз (если доступны на стороне провайдера): " . implode(', ', $vectorStoreIds) . ". Отвечай только фактами, не выдумывай.";
-        }
+        // Vector Stores передаются через параметр tools, не нужно добавлять их в промпт
         $input[] = [
             'role' => 'system',
             'content' => $systemPrompt,
@@ -58,10 +68,18 @@ class OpenAIService
         $payload = [
             'model' => $model ?? 'gpt-5-2025-08-07',
             'input' => $input,
-            'max_output_tokens' => $maxTokens ?? 500,
+            'max_output_tokens' => $maxTokens ?? 2000,
             'service_tier' => $serviceTier ?? 'flex',
         ];
 
+        // Добавляем temperature, если указана (контролирует случайность ответов: 0 = детерминированный, 2 = очень случайный)
+        if ($temperature !== null) {
+            $payload['temperature'] = (float) $temperature;
+        }
+
+        // Если указаны Vector Stores, добавляем File Search tool
+        // OpenAI автоматически будет искать релевантные документы в указанных базах
+        // и использовать их для более точных ответов (RAG - Retrieval-Augmented Generation)
         if (!empty($vectorStoreIds)) {
             $payload['tools'] = [ [
                 'type' => 'file_search',
@@ -123,6 +141,13 @@ class OpenAIService
                     return $this->chat($systemPrompt, $history, $temperature, $maxTokens, null, null, $model);
                 }
 
+                Log::info('✅ OpenAI Responses API успешный ответ с RAG', [
+                    'response_id' => $responseId,
+                    'content_length' => mb_strlen($content),
+                    'vector_stores_used' => count($vectorStoreIds),
+                    'usage' => $usage,
+                ]);
+
                 return [
                     'content' => $content,
                     'response_id' => $responseId,
@@ -182,8 +207,13 @@ class OpenAIService
         $payload = [
             'model' => $model ?? 'gpt-5-2025-08-07',
             'messages' => $messages,
-            'max_completion_tokens' => $maxTokens ?? 500,
+            'max_completion_tokens' => $maxTokens ?? 2000,
         ];
+
+        // Добавляем temperature, если указана
+        if ($temperature !== null) {
+            $payload['temperature'] = (float) $temperature;
+        }
         
         // service_tier поддерживается только в Responses API, не в chat/completions
         // Поэтому не добавляем его в payload

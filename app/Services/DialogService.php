@@ -310,7 +310,8 @@ class DialogService
                 ];
             })->values()->all();
 
-            // Собираем все vector store IDs из конфигурации
+            // Собираем все vector store IDs из конфигурации для RAG (Retrieval-Augmented Generation)
+            // OpenAI File Search будет автоматически искать релевантные документы в этих базах знаний
             $vectorIds = [];
             
             if ($config && is_array($config->vector_stores)) {
@@ -320,6 +321,17 @@ class DialogService
                     }
                 }
             }
+
+            Log::info("🗂️ Подготовка к вызову OpenAI", [
+                'chatId' => $chatId,
+                'model' => $model,
+                'temperature' => $temperature,
+                'max_tokens' => $maxTokens,
+                'service_tier' => $serviceTier,
+                'vector_stores_count' => count($vectorIds),
+                'vector_store_ids' => $vectorIds,
+                'using_rag' => !empty($vectorIds),
+            ]);
 
             // Используем Responses API с RAG, если настроены vector stores
             $startTime = microtime(true);
@@ -593,7 +605,6 @@ class DialogService
                 null,
                 null,
                 'gpt-4o-mini'
-                // chat/completions не поддерживает service_tier
             );
 
             $responseContent = trim($result['content'] ?? '');
