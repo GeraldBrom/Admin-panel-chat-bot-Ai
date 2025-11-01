@@ -47,6 +47,14 @@ class BotService {
     }
 
     /**
+     * Очистить контекст активной сессии (удалить все сообщения)
+     */
+    async clearSession(chatId: string): Promise<ChatBot> {
+        const response = await api.delete(`/bots/${chatId}/session`);
+        return response.data.data;
+    }
+
+    /**
      * Получить все конфигурации (с фильтром по платформе)
      */
     async getBotConfigs(platform?: 'whatsapp'): Promise<BotConfig[]> {

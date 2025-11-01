@@ -137,6 +137,37 @@ export const useBotStore = defineStore('bot', () => {
         }
     }
 
+    async function clearBotSession(chatId: string) {
+        try {
+            loading.value = true;
+            error.value = null;
+            const updatedBot = await botService.clearSession(chatId);
+            
+            // Проверяем, что updatedBot не null/undefined
+            if (updatedBot) {
+                const index = chatBots.value.findIndex(bot => bot.chat_id === chatId);
+                if (index !== -1) {
+                    chatBots.value[index] = updatedBot;
+                }
+                
+                // Всегда очищаем messages для выбранного бота
+                if (currentChatBot.value?.chat_id === chatId) {
+                    currentChatBot.value = updatedBot;
+                }
+            }
+            
+            // Принудительно очищаем messages независимо от currentChatBot
+            messages.value = [];
+            
+            return updatedBot;
+        } catch (err: any) {
+            error.value = err.response?.data?.message || 'Ошибка очистки контекста сессии';
+            throw err;
+        } finally {
+            loading.value = false;
+        }
+    }
+
     async function fetchBotConfigs(platform?: 'whatsapp') {
         try {
             loading.value = true;
@@ -224,6 +255,7 @@ export const useBotStore = defineStore('bot', () => {
         updateChatBot,
         deleteChatBot,
         stopAllBots,
+        clearBotSession,
         fetchBotConfigs,
         createBotConfig,
         updateBotConfig,

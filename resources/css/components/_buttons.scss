@@ -41,6 +41,11 @@
         @include button-variant($danger-color);
     }
     
+    // Warning button
+    &--warning {
+        @include button-variant($warning-color);
+    }
+    
     // Outline button
     &--outline {
         background: transparent;

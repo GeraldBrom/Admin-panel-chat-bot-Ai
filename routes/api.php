@@ -25,8 +25,6 @@ Route::prefix('auth')->group(function () {
 
 // Публичный вебхук от Green API (без аутентификации)
 Route::post('/greenapi/webhook', [GreenApiWebhookController::class, 'handle']);
-Route::get('/greenapi/last', [GreenApiWebhookController::class, 'last']);
-Route::match(['get', 'post'], '/greenapi/webhook/test', [GreenApiWebhookController::class, 'test']);
 
 // Защищенные маршруты (требуют авторизации)
 Route::middleware('auth:sanctum')->group(function () {
@@ -36,16 +34,18 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/me', [AuthController::class, 'me']);
     });
     
-    // Bot management routes
+    
     Route::prefix('bots')->group(function () {
         Route::get('/', [BotController::class, 'index']);
         Route::post('/start', [BotController::class, 'start']);
         Route::post('/stop-all', [BotController::class, 'stopAll']);
+        
+        Route::delete('/{chatId}/session', [BotController::class, 'clearSession'])->where('chatId', '.*');
         Route::get('/{chatId}', [BotController::class, 'show'])->where('chatId', '.*');
         Route::delete('/{chatId}', [BotController::class, 'stop'])->where('chatId', '.*');
     });
 
-    // Bot configs routes (без статуса "активная" — конфигурации выбираются явно)
+    
     Route::prefix('bot-configs')->group(function () {
         Route::get('/', [BotConfigController::class, 'index']);
         Route::post('/', [BotConfigController::class, 'store']);
@@ -53,11 +53,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/{id}', [BotConfigController::class, 'destroy']);
     });
 
-    // Logs management routes
+    
     Route::prefix('logs')->group(function () {
         Route::get('/', [LogController::class, 'index']);
         Route::get('/download', [LogController::class, 'download']);
         Route::post('/clear', [LogController::class, 'clear']);
     });
 });
-

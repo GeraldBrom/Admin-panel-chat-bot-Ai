@@ -30,10 +30,22 @@ class BotSessionResource extends JsonResource
                 return $this->dialog?->dialog_id;
             }),
             'messages' => $this->whenLoaded('dialog', function () {
-                if (!$this->dialog || !$this->dialog->messages) {
+                if (!$this->dialog) {
                     return [];
                 }
-                return $this->dialog->messages->map(function ($message) {
+                
+                // Проверяем, загружено ли отношение messages
+                if (!$this->dialog->relationLoaded('messages')) {
+                    return [];
+                }
+                
+                // Если загружено, но пустое - возвращаем пустой массив
+                $messages = $this->dialog->messages;
+                if ($messages->isEmpty()) {
+                    return [];
+                }
+                
+                return $messages->map(function ($message) {
                     return [
                         'id' => $message->id,
                         'dialog_id' => $message->dialog_id,

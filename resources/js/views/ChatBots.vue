@@ -19,6 +19,7 @@ const newBotForm = ref({
 
 const loading = computed(() => botStore.loading);
 const error = computed(() => botStore.error);
+const validBots = computed(() => botStore.chatBots.filter(bot => bot !== null && bot !== undefined));
 
 onMounted(async () => {
   await botStore.fetchAllChatBots();
@@ -173,6 +174,40 @@ const stopAllBots = async () => {
     }
 };
 
+const clearSession = async (bot: ChatBot) => {
+    if (confirm(`Очистить контекст для "${bot.chat_id}"?\n\nВсе сообщения диалога будут удалены, но сессия останется активной. Бот начнёт новый диалог без истории переписки.`)) {
+        try {
+            // Очищаем контекст на сервере
+            await botStore.clearBotSession(bot.chat_id);
+            
+            // Обновляем selectedBot с очищенными сообщениями
+            if (selectedBot.value?.chat_id === bot.chat_id) {
+                selectedBot.value = {
+                    ...selectedBot.value,
+                    messages: []
+                };
+            }
+            
+            // Даем небольшую задержку для синхронизации БД, затем принудительно перезагружаем
+            setTimeout(async () => {
+                try {
+                    if (selectedBot.value?.chat_id === bot.chat_id) {
+                        const freshBot = await botStore.fetchChatBot(bot.chat_id);
+                        selectedBot.value = freshBot;
+                    }
+                } catch (e) {
+                    console.error('[ChatBots] Failed to refresh after clear:', e);
+                }
+            }, 300);
+            
+            alert('Контекст сессии успешно очищен');
+        } catch (err) {
+            console.error('[ChatBots] Failed to clear session:', err);
+            alert('Ошибка очистки контекста сессии');
+        }
+    }
+};
+
 const sendMessage = async (content: string) => {
     if (!selectedBot.value) return;
     
@@ -227,8 +262,8 @@ const sendMessage = async (content: string) => {
           <h2>Список ботов</h2>
           <div class="bots-grid">
             <ChatBotCard
-              v-for="bot in botStore.chatBots"
-              :key="bot.id"
+              v-for="bot in validBots"
+              :key="bot.chat_id"
               :bot="bot"
               :selected="selectedBot?.chat_id === bot.chat_id"
               @select="selectBot"
@@ -244,6 +279,16 @@ const sendMessage = async (content: string) => {
             <div class="chat-header__info">
               <h2>{{ selectedBot.chat_id }}</h2>
               <span class="chat-platform">{{ selectedBot.platform }}</span>
+            </div>
+            <div class="chat-header__actions">
+              <button 
+                v-if="selectedBot.status === 'running'"
+                class="btn btn--warning btn--sm"
+                @click="clearSession(selectedBot)"
+                title="Очистить контекст сессии"
+              >
+                🧹 Очистить контекст
+              </button>
             </div>
           </div>
           <BotDialog

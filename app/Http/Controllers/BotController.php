@@ -191,5 +191,59 @@ class BotController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Очистка контекста активной сессии бота
+     * Удаляет все сообщения и факты диалога, сохраняя саму сессию активной
+     */
+    public function clearSession(string $chatId): JsonResponse
+    {
+        try {
+            $session = BotSession::where('chat_id', $chatId)->first();
+
+            if (!$session) {
+                return response()->json([
+                    'message' => 'Bot session not found',
+                    'chat_id' => $chatId,
+                ], 404);
+            }
+
+            // Очищаем контекст сессии
+            $this->dialogService->clearSession($chatId);
+
+            // ВАЖНО: Создаем полностью новый запрос без кеша
+            // Используем unsetRelation чтобы очистить закешированные отношения
+            $session->unsetRelation('dialog');
+            
+            // Перезагружаем сессию из БД с чистыми данными
+            $freshSession = BotSession::with(['dialog' => function ($query) {
+                $query->with(['messages' => function ($messagesQuery) {
+                    $messagesQuery->orderBy('created_at', 'asc');
+                }]);
+            }])->where('chat_id', $chatId)->first();
+
+            Log::info('Session context cleared', [
+                'chat_id' => $chatId,
+                'messages_count' => $freshSession->dialog?->messages?->count() ?? 0,
+            ]);
+
+            return response()->json([
+                'message' => 'Session context cleared successfully',
+                'data' => new BotSessionResource($freshSession),
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to clear session context', [
+                'chat_id' => $chatId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'message' => 'Failed to clear session context',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
 }
 
