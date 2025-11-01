@@ -16,10 +16,24 @@ class GreenApiWebhookController extends Controller
         $payload = $request->all();
 
         Log::info('[GreenAPI Webhook] Получен webhook', [
+            'url' => $request->fullUrl(),
+            'method' => $request->method(),
+            'ip' => $request->ip(),
             'has_messages' => isset($payload['messages']),
             'has_message' => isset($payload['message']) || isset($payload['body']),
             'typeWebhook' => $payload['typeWebhook'] ?? null,
+            'payload_keys' => array_keys($payload),
+            'timestamp' => now()->toDateTimeString(),
         ]);
+
+        // Детальное логирование для диагностики
+        if (!empty($payload)) {
+            Log::debug('[GreenAPI Webhook] Полный payload', [
+                'payload' => $payload
+            ]);
+        } else {
+            Log::warning('[GreenAPI Webhook] Получен пустой payload!');
+        }
 
         // Асинхронная обработка после ответа (не блокируем 200 OK)
         ProcessGreenApiWebhook::dispatchAfterResponse($payload);
@@ -27,6 +41,7 @@ class GreenApiWebhookController extends Controller
         return response()->json([
             'status' => 'ok',
             'queued' => true,
+            'received_at' => now()->toIso8601String(),
         ]);
     }
 
@@ -43,6 +58,29 @@ class GreenApiWebhookController extends Controller
             'minutes' => $minutes,
             'count' => is_array($messages) ? count($messages) : 0,
             'sample' => array_slice($messages, 0, 3),
+        ]);
+    }
+
+    /**
+     * Тестовый endpoint для проверки работоспособности webhook
+     */
+    public function test(Request $request): JsonResponse
+    {
+        Log::info('[GreenAPI Webhook TEST] Получен тестовый запрос', [
+            'url' => $request->fullUrl(),
+            'method' => $request->method(),
+            'ip' => $request->ip(),
+            'headers' => $request->headers->all(),
+            'payload' => $request->all(),
+            'timestamp' => now()->toDateTimeString(),
+        ]);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Webhook endpoint работает!',
+            'received_at' => now()->toIso8601String(),
+            'your_ip' => $request->ip(),
+            'payload_received' => $request->all(),
         ]);
     }
 
