@@ -26,10 +26,21 @@ class GreenApiService
         $url = "{$this->baseUrl}/waInstance{$this->idInstance}/sendMessage/{$this->apiToken}";
         
         try {
-            $response = Http::post($url, [
-                'chatId' => $chatId,
-                'message' => $message,
-            ]);
+            $response = Http::timeout(30)
+                ->connectTimeout(10)
+                ->retry(3, 1000)
+                ->withOptions([
+                    'curl' => [
+                        CURLOPT_DNS_CACHE_TIMEOUT => 300,
+                        CURLOPT_TCP_KEEPALIVE => 1,
+                        CURLOPT_TCP_KEEPIDLE => 120,
+                        CURLOPT_TCP_KEEPINTVL => 60,
+                    ],
+                ])
+                ->post($url, [
+                    'chatId' => $chatId,
+                    'message' => $message,
+                ]);
 
             if ($response->successful()) {
                 return $response->json();
@@ -64,7 +75,14 @@ class GreenApiService
 
             $response = Http::acceptJson()
                 ->timeout(10)
+                ->connectTimeout(5)
                 ->retry(2, 200)
+                ->withOptions([
+                    'curl' => [
+                        CURLOPT_DNS_CACHE_TIMEOUT => 300,
+                        CURLOPT_TCP_KEEPALIVE => 1,
+                    ],
+                ])
                 ->get($url, [
                     'minutes' => $minutes,
                 ]);
@@ -115,7 +133,15 @@ class GreenApiService
         $url = "{$this->baseUrl}/waInstance{$this->idInstance}/receiveNotification/{$this->apiToken}";
 
         try {
-            $response = Http::get($url);
+            $response = Http::timeout(10)
+                ->connectTimeout(5)
+                ->withOptions([
+                    'curl' => [
+                        CURLOPT_DNS_CACHE_TIMEOUT => 300,
+                        CURLOPT_TCP_KEEPALIVE => 1,
+                    ],
+                ])
+                ->get($url);
 
             if ($response->successful()) {
                 $data = $response->json();
@@ -145,7 +171,15 @@ class GreenApiService
         $url = "{$this->baseUrl}/waInstance{$this->idInstance}/deleteNotification/{$this->apiToken}/{$receiptId}";
         
         try {
-            Http::delete($url);
+            Http::timeout(5)
+                ->connectTimeout(3)
+                ->withOptions([
+                    'curl' => [
+                        CURLOPT_DNS_CACHE_TIMEOUT => 300,
+                        CURLOPT_TCP_KEEPALIVE => 1,
+                    ],
+                ])
+                ->delete($url);
         } catch (\Exception $e) {
             Log::error('GreenAPI deleteNotification error', [
                 'receiptId' => $receiptId,

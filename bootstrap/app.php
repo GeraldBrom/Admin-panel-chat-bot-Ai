@@ -16,8 +16,9 @@ return Application::configure(basePath: dirname(__DIR__))
         //
     })
     ->withSchedule(function (Schedule $schedule): void {
-        // Webhook настроен, polling отключен
-        // $schedule->command('greenapi:poll --minutes=1')->everyTenSeconds();
+        // Polling для локальной разработки (на продакшене используется webhook)
+        // Для запуска: php artisan schedule:work
+        $schedule->command('greenapi:poll --minutes=1')->everyTenSeconds();
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

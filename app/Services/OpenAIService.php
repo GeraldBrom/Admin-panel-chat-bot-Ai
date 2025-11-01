@@ -165,7 +165,6 @@ class OpenAIService
         // gpt-5 не поддерживает произвольное значение temperature — используем дефолт (не передаём параметр)
         try {
             $response = $this->getHttpClient()
-                ->timeout(60)
                 ->connectTimeout(10)
                 ->retry(2, 1000)
                 ->post("{$this->getBaseUrl()}/chat/completions", $payload);
@@ -220,6 +219,13 @@ class OpenAIService
 
         $options = [
             'timeout' => 60, // 60 секунд таймаут для медленных запросов
+            'curl' => [
+                CURLOPT_DNS_CACHE_TIMEOUT => 300,
+                CURLOPT_TCP_KEEPALIVE => 1,
+                CURLOPT_TCP_KEEPIDLE => 120,
+                CURLOPT_TCP_KEEPINTVL => 60,
+                CURLOPT_FRESH_CONNECT => false, // Использовать пул соединений
+            ],
         ];
 
         // Proxy support via .env (USE_PROXY, PROXY_HOST, PROXY_PORT)
