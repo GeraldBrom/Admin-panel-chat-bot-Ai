@@ -41,12 +41,7 @@ class OpenAIService
         }
         $input[] = [
             'role' => 'system',
-            'content' => [
-                [
-                    'type' => 'input_text',
-                    'text' => $systemPrompt,
-                ],
-            ],
+            'content' => $systemPrompt,
         ];
         foreach ($history as $msg) {
             if (!isset($msg['role'], $msg['content'])) {
@@ -54,12 +49,7 @@ class OpenAIService
             }
             $input[] = [
                 'role' => $msg['role'],
-                'content' => [
-                    [
-                        'type' => 'input_text',
-                        'text' => (string) $msg['content'],
-                    ],
-                ],
+                'content' => (string) $msg['content'],
             ];
         }
 
@@ -83,13 +73,26 @@ class OpenAIService
             if ($response->successful()) {
                 $responseId = $response->json('id');
 
-                // Try to extract text from Responses API structure
+                // Extract text from Responses API structure
                 $content = '';
                 $output = $response->json('output') ?? [];
-                if (is_array($output) && isset($output[0]['content'][0]['text']['value'])) {
-                    $content = trim((string) $output[0]['content'][0]['text']['value']);
-                } elseif ($response->json('choices.0.message.content')) { // fallback to chat-like shape
-                    $content = trim((string) $response->json('choices.0.message.content'));
+                
+                // Новый формат: output[0].content = строка или массив с type: output_text
+                if (is_array($output) && !empty($output)) {
+                    $firstOutput = $output[0] ?? [];
+                    $outputContent = $firstOutput['content'] ?? '';
+                    
+                    if (is_string($outputContent)) {
+                        $content = trim($outputContent);
+                    } elseif (is_array($outputContent)) {
+                        // Ищем output_text
+                        foreach ($outputContent as $item) {
+                            if (isset($item['type']) && $item['type'] === 'output_text' && isset($item['text'])) {
+                                $content = trim($item['text']);
+                                break;
+                            }
+                        }
+                    }
                 }
 
                 $usage = [
