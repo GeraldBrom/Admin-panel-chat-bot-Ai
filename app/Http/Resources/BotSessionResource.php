@@ -27,9 +27,12 @@ class BotSessionResource extends JsonResource
             'updated_at' => $this->updated_at?->toISOString(),
             // Include dialog_id and messages if dialog is loaded
             'dialog_id' => $this->whenLoaded('dialog', function () {
-                return $this->dialog->dialog_id ?? null;
+                return $this->dialog?->dialog_id;
             }),
             'messages' => $this->whenLoaded('dialog', function () {
+                if (!$this->dialog || !$this->dialog->messages) {
+                    return [];
+                }
                 return $this->dialog->messages->map(function ($message) {
                     return [
                         'id' => $message->id,
