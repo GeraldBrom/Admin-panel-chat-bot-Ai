@@ -17,7 +17,7 @@ const handleLogout = async () => {
         <div class="header-content">
           <div class="header-logo">
             <router-link to="/dashboard">
-              <img src="/images/logo.png" alt="Logo" class="header-logo-img" width="130">
+              <span class="header-logo-text">CapitalMars Chat-Bot</span>
             </router-link>
           </div>
           
