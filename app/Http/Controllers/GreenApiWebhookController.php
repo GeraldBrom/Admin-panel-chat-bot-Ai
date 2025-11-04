@@ -182,10 +182,38 @@ class GreenApiWebhookController extends Controller
         $chatId = $message['chatId']
             ?? ($message['senderData']['chatId'] ?? null);
 
-        $messageText = $message['textMessage']
-            ?? ($message['messageData']['textMessageData']['textMessage'] ?? null);
+        // Поддержка различных форматов текстовых сообщений от GreenAPI
+        $messageText = null;
+        
+        // Формат 1: textMessage (простой текст)
+        if (isset($message['textMessage'])) {
+            $messageText = $message['textMessage'];
+        }
+        
+        // Формат 2: messageData.textMessageData.textMessage
+        elseif (isset($message['messageData']['textMessageData']['textMessage'])) {
+            $messageText = $message['messageData']['textMessageData']['textMessage'];
+        }
+        
+        // Формат 3: messageData.extendedTextMessageData.text (расширенные текстовые сообщения)
+        elseif (isset($message['messageData']['extendedTextMessageData']['text'])) {
+            $messageText = $message['messageData']['extendedTextMessageData']['text'];
+        }
 
         if (!$chatId || !$messageText) {
+            // Логируем нераспознанные форматы для отладки
+            if (!$messageText && $chatId) {
+                Log::warning('[GreenAPI Webhook] Не удалось извлечь текст сообщения', [
+                    'chatId' => $chatId,
+                    'typeMessage' => $message['messageData']['typeMessage'] ?? ($message['typeMessage'] ?? 'unknown'),
+                    'available_paths' => [
+                        'textMessage' => isset($message['textMessage']),
+                        'messageData.textMessageData' => isset($message['messageData']['textMessageData']),
+                        'messageData.extendedTextMessageData' => isset($message['messageData']['extendedTextMessageData']),
+                    ],
+                    'messageData_keys' => isset($message['messageData']) ? array_keys($message['messageData']) : [],
+                ]);
+            }
             return null;
         }
 
