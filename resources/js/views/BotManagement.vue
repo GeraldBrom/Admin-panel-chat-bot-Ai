@@ -157,12 +157,12 @@ const cancelEditing = () => {
 
                   <div class="config-section">
                     <h4>Приветственное сообщение (Kickoff)</h4>
-                    <div class="config-text config-text--pre">{{ config.kickoff_message || 'Не задано' }}</div>
+                    <div class="config-text config-text--pre" style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">{{ config.kickoff_message || 'Не задано' }}</div>
                   </div>
 
                   <div class="config-section">
                     <h4>Промпт для ChatGPT</h4>
-                    <div class="config-text config-text--pre">{{ config.prompt }}</div>
+                    <div class="config-text config-text--pre" style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">{{ config.prompt }}</div>
                   </div>
 
                   
@@ -197,6 +197,7 @@ const cancelEditing = () => {
                       class="form-textarea"
                       rows="6"
                       placeholder="Например: {owner_name_clean}, добрый день!&#10;&#10;Я — ИИ-ассистент Capital Mars..."
+                      style="white-space: pre-wrap; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;"
                     />
                     <small class="form-help">Первое сообщение, которое бот отправляет клиенту. Доступны переменные: {owner_name_clean}, {address}, {objectCount}, {price}</small>
                   </div>
@@ -208,6 +209,7 @@ const cancelEditing = () => {
                       class="form-textarea"
                       rows="40"
                       placeholder="Введите системный промпт для ChatGPT..."
+                      style="white-space: pre-wrap; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;"
                     />
                     <small class="form-help">Этот промпт определяет поведение и стиль ответов бота</small>
                   </div>
