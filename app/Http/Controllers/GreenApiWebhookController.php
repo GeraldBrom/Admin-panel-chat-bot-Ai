@@ -30,6 +30,22 @@ class GreenApiWebhookController extends Controller
             'timestamp' => now()->toDateTimeString(),
         ]);
 
+        // Игнорируем исходящие сообщения от бота (чтобы бот не разговаривал сам с собой)
+        $typeWebhook = $payload['typeWebhook'] ?? null;
+        if (in_array($typeWebhook, ['outgoingMessageStatus', 'outgoingAPIMessageReceived'], true)) {
+            Log::debug('[GreenAPI Webhook] Пропускаем исходящее сообщение', [
+                'typeWebhook' => $typeWebhook,
+                'chatId' => $payload['chatId'] ?? $payload['senderData']['chatId'] ?? 'unknown',
+            ]);
+            
+            return response()->json([
+                'status' => 'ok',
+                'processed' => 0,
+                'message' => 'Outgoing message ignored',
+                'received_at' => now()->toIso8601String(),
+            ]);
+        }
+
         // Детальное логирование для диагностики
         if (!empty($payload)) {
             Log::debug('[GreenAPI Webhook] Полный payload', [
@@ -176,6 +192,19 @@ class GreenApiWebhookController extends Controller
     private function normalizeMessage(array $message = null): ?array
     {
         if (!$message) {
+            return null;
+        }
+
+        // Дополнительная защита: игнорируем сообщения от самого бота
+        // sender - это отправитель сообщения, wid - это ID инстанса бота
+        $sender = $message['senderData']['sender'] ?? null;
+        $botWid = $message['instanceData']['wid'] ?? null;
+        
+        if ($sender && $botWid && $sender === $botWid) {
+            Log::debug('[GreenAPI Webhook] Пропускаем сообщение от самого бота', [
+                'sender' => $sender,
+                'botWid' => $botWid,
+            ]);
             return null;
         }
 
