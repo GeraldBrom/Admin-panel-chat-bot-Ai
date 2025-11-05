@@ -20,6 +20,9 @@ return Application::configure(basePath: dirname(__DIR__))
             '/api/greenapi/webhook',
             '/api/greenapi/webhook/*',
         ]);
+        
+        // Добавляем middleware для установки charset в JSON ответах
+        $middleware->append(\App\Http\Middleware\SetJsonCharset::class);
     })
     ->withSchedule(function (Schedule $schedule): void {
         // Polling для локальной разработки (на продакшене используется webhook)

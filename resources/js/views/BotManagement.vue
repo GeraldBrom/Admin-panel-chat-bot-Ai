@@ -43,19 +43,52 @@ const platforms = [
     { value: 'whatsapp', label: 'WhatsApp', icon: '📱' },
 ];
 
+// Функция для нормализации специальных символов
+const normalizeText = (text: string): string => {
+    if (!text) return text;
+    
+    // Нормализуем Unicode символы (NFC - Canonical Composition)
+    let normalized = text.normalize('NFC');
+    
+    // Заменяем проблемные символы из Private Use Area и другие варианты
+    // U+F0B7 (Private Use Area) и другие варианты bullet point на стандартный U+2022
+    normalized = normalized
+        .replace(/\uF0B7/g, '•') // Private Use Area символ
+        .replace(/[\u2022\u2023\u25E6\u2043\u2219\u00B7\u25CF]/g, '•') // Различные варианты bullet
+        .replace(/\uFFFD/g, '•'); // Replacement character на bullet
+    
+    return normalized;
+};
+
 const selectConfig = (config: BotConfig) => {
     if (selectedConfig.value?.id === config.id) {
         selectedConfig.value = null;
     } else {
         selectedConfig.value = config;
         configForm.value = {
-            prompt: config.prompt,
+            prompt: normalizeText(config.prompt || ''),
             max_tokens: config.max_tokens || 2000,
-            kickoff_message: config.kickoff_message || '',
+            kickoff_message: normalizeText(config.kickoff_message || ''),
             vector_stores: config.vector_stores ? [...config.vector_stores] : [],
             openai_model: config.openai_model || 'gpt-4o',
             openai_service_tier: config.openai_service_tier || 'flex',
         };
+    }
+};
+
+// Обработчик ввода для textarea промпта
+const handlePromptInput = (event: Event) => {
+    const target = event.target as HTMLTextAreaElement;
+    if (target) {
+        configForm.value.prompt = normalizeText(target.value);
+    }
+};
+
+// Обработчик ввода для kickoff_message
+const handleKickoffInput = (event: Event) => {
+    const target = event.target as HTMLTextAreaElement;
+    if (target) {
+        configForm.value.kickoff_message = normalizeText(target.value);
     }
 };
 
@@ -74,7 +107,14 @@ const saveConfig = async () => {
     if (!selectedConfig.value) return;
     
     try {
-        await botStore.updateBotConfig(selectedConfig.value.id, configForm.value);
+        // Нормализуем текст перед сохранением
+        const normalizedData = {
+            ...configForm.value,
+            prompt: normalizeText(configForm.value.prompt),
+            kickoff_message: normalizeText(configForm.value.kickoff_message),
+        };
+        
+        await botStore.updateBotConfig(selectedConfig.value.id, normalizedData);
         await botStore.fetchBotConfigs(selectedPlatform.value);
         selectedConfig.value = null;
     } catch (err) {
@@ -157,12 +197,12 @@ const cancelEditing = () => {
 
                   <div class="config-section">
                     <h4>Приветственное сообщение (Kickoff)</h4>
-                    <div class="config-text config-text--pre" style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">{{ config.kickoff_message || 'Не задано' }}</div>
+                    <div class="config-text config-text--pre" style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">{{ normalizeText(config.kickoff_message || 'Не задано') }}</div>
                   </div>
 
                   <div class="config-section">
                     <h4>Промпт для ChatGPT</h4>
-                    <div class="config-text config-text--pre" style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">{{ config.prompt }}</div>
+                    <div class="config-text config-text--pre" style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">{{ normalizeText(config.prompt || '') }}</div>
                   </div>
 
                   
@@ -193,7 +233,8 @@ const cancelEditing = () => {
                   <div class="form-group">
                     <label class="form-label">Приветственное сообщение (Kickoff)</label>
                     <textarea
-                      v-model="configForm.kickoff_message"
+                      :value="configForm.kickoff_message"
+                      @input="handleKickoffInput"
                       class="form-textarea"
                       rows="6"
                       placeholder="Например: {owner_name_clean}, добрый день!&#10;&#10;Я — ИИ-ассистент Capital Mars..."
@@ -205,7 +246,8 @@ const cancelEditing = () => {
                   <div class="form-group">
                     <label class="form-label">Промпт для ChatGPT *</label>
                     <textarea
-                      v-model="configForm.prompt"
+                      :value="configForm.prompt"
+                      @input="handlePromptInput"
                       class="form-textarea"
                       rows="40"
                       placeholder="Введите системный промпт для ChatGPT..."
@@ -213,7 +255,6 @@ const cancelEditing = () => {
                     />
                     <small class="form-help">Этот промпт определяет поведение и стиль ответов бота</small>
                   </div>
-
 
                   <div class="form-group">
                     <label class="form-label">Max Tokens</label>
