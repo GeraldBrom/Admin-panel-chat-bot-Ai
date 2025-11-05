@@ -177,7 +177,7 @@ GET  /api/greenapi/last       # Последние сообщения
   "scenario_description": "Описание сценария работы",
   "temperature": 0.7,
   "max_tokens": 500,
-  "openai_model": "gpt-5-2025-08-07",
+  "openai_model": "gpt-4o",
   "openai_service_tier": "flex",
   "kickoff_message": "Приветственное сообщение",
   "vector_stores": [
@@ -190,7 +190,7 @@ GET  /api/greenapi/last       # Последние сообщения
 **Параметры:**
 - `temperature` (0-2): Креативность ответов. 0 = строгие, 2 = креативные
 - `max_tokens`: Максимальная длина ответа
-- `openai_model`: Модель GPT (gpt-5-2025-08-07, gpt-4o и др.)
+- `openai_model`: Модель GPT (gpt-4o, gpt-4o-mini, gpt-4-turbo и др.)
 - `openai_service_tier`: Уровень сервиса (`flex`, `standard`)
 - `vector_stores`: Массив ID векторных хранилищ для RAG
 

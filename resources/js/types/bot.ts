@@ -72,7 +72,6 @@ export interface BotConfig {
     platform: 'whatsapp';
     prompt: string;
     scenario_description: string;
-    temperature: number;
     max_tokens: number;
     vector_store_id_main?: string;
     vector_store_id_objections?: string;
@@ -111,7 +110,6 @@ export interface CreateBotConfigData {
     platform: 'whatsapp';
     prompt: string;
     scenario_description: string;
-    temperature?: number;
     max_tokens?: number;
     vector_store_id_main?: string;
     vector_store_id_objections?: string;

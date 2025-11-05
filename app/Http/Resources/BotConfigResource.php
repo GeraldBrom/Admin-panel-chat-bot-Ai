@@ -22,7 +22,7 @@ class BotConfigResource extends JsonResource
             'max_tokens' => $this->max_tokens,
             'kickoff_message' => $this->kickoff_message,
             'vector_stores' => $this->vector_stores ?? [],
-            'openai_model' => $this->openai_model ?? 'gpt-5-2025-08-07',
+            'openai_model' => $this->openai_model ?? 'gpt-4o',
             'openai_service_tier' => $this->openai_service_tier ?? 'flex',
             'settings' => $this->settings,
             'is_active' => $this->is_active,

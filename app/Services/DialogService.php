@@ -294,9 +294,8 @@ class DialogService
             // Создать историю для одного вызова LLM
             $config = $session->bot_config_id ? BotConfig::find($session->bot_config_id) : null;
             $systemPrompt = $config?->prompt ?? 'Ты - профессионал ИИ-ассистент компании Capital Mars. Отвечай кратко, по делу.';
-            $temperature = $config?->temperature ? (float) $config->temperature : null;
             $maxTokens = $config?->max_tokens;
-            $model = $config?->openai_model ?? 'gpt-5-2025-08-07';
+            $model = $config?->openai_model ?? 'gpt-4o';
             $serviceTier = $config?->openai_service_tier ?? 'flex';
 
             $historyMessages = Message::where('dialog_id', $dialog->dialog_id)
@@ -325,7 +324,6 @@ class DialogService
             Log::info("🗂️ Подготовка к вызову OpenAI", [
                 'chatId' => $chatId,
                 'model' => $model,
-                'temperature' => $temperature,
                 'max_tokens' => $maxTokens,
                 'service_tier' => $serviceTier,
                 'vector_stores_count' => count($vectorIds),
@@ -339,7 +337,7 @@ class DialogService
                 $result = $this->openAIService->chatWithRag(
                     $systemPrompt,
                     $history,
-                    $temperature,
+                    null,  // temperature не используется
                     $maxTokens,
                     $vectorIds,
                     $model,
@@ -349,7 +347,7 @@ class DialogService
                 $result = $this->openAIService->chat(
                     $systemPrompt,
                     $history,
-                    $temperature,
+                    null,  // temperature не используется
                     $maxTokens,
                     null,
                     null,
@@ -699,7 +697,7 @@ class DialogService
             $result = $this->openAIService->chat(
                 'Ты - помощник для извлечения структурированных фактов из текста. Отвечай ТОЛЬКО валидным JSON массивом.',
                 [['role' => 'user', 'content' => $extractionPrompt]],
-                0.1, // Очень низкая температура для точности
+                null, // temperature не используется
                 300,
                 null,
                 null,
@@ -821,7 +819,7 @@ class DialogService
             $result = $this->openAIService->chat(
                 'Ты - помощник, который создает краткие резюме диалогов. Отвечай только кратким резюме.',
                 [['role' => 'user', 'content' => $summaryPrompt]],
-                0.3, // Низкая температура для более предсказуемых результатов
+                null, // temperature не используется
                 200, // Максимум 200 токенов для summary
                 null,
                 null,

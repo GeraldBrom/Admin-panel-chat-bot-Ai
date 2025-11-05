@@ -33,7 +33,7 @@ class OpenAIService
      * @param float|null $temperature Температура (0.0-2.0) - контролирует случайность ответов
      * @param int|null $maxTokens Максимальное количество токенов в ответе
      * @param array $vectorStoreIds Массив ID векторных хранилищ (например: ['vs_abc123', 'vs_xyz789'])
-     * @param string|null $model Модель OpenAI (по умолчанию gpt-5-2025-08-07)
+     * @param string|null $model Модель OpenAI (по умолчанию gpt-4o)
      * @param string|null $serviceTier Уровень сервиса: 'auto', 'default', 'flex' (по умолчанию 'flex')
      * 
      * @return array ['content' => string, 'response_id' => string|null, 'usage' => ['prompt_tokens'=>int,'completion_tokens'=>int]]
@@ -65,17 +65,16 @@ class OpenAIService
             ];
         }
 
+        $modelName = $model ?? 'gpt-4o';
+        
         $payload = [
-            'model' => $model ?? 'gpt-5-2025-08-07',
+            'model' => $modelName,
             'input' => $input,
             'max_output_tokens' => $maxTokens ?? 2000,
             'service_tier' => $serviceTier ?? 'flex',
         ];
 
-        // Добавляем temperature, если указана (контролирует случайность ответов: 0 = детерминированный, 2 = очень случайный)
-        if ($temperature !== null) {
-            $payload['temperature'] = (float) $temperature;
-        }
+        // Параметр temperature не добавляется, так как некоторые модели его не поддерживают
 
         // Если указаны Vector Stores, добавляем File Search tool
         // OpenAI автоматически будет искать релевантные документы в указанных базах
@@ -204,16 +203,15 @@ class OpenAIService
             ];
         }
 
+        $modelName = $model ?? 'gpt-4o';
+        
         $payload = [
-            'model' => $model ?? 'gpt-5-2025-08-07',
+            'model' => $modelName,
             'messages' => $messages,
             'max_completion_tokens' => $maxTokens ?? 2000,
         ];
 
-        // Добавляем temperature, если указана
-        if ($temperature !== null) {
-            $payload['temperature'] = (float) $temperature;
-        }
+        // Параметр temperature не добавляется, так как некоторые модели его не поддерживают
         
         // service_tier поддерживается только в Responses API, не в chat/completions
         // Поэтому не добавляем его в payload

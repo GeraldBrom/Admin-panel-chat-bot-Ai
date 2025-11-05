@@ -19,7 +19,6 @@ onMounted(() => {
 
 const configForm = ref<{
     prompt: string;
-    temperature: number;
     max_tokens: number;
     kickoff_message: string;
     vector_stores: VectorStore[];
@@ -27,11 +26,10 @@ const configForm = ref<{
     openai_service_tier: string;
 }>({
     prompt: '',
-    temperature: 0.7,
     max_tokens: 2000,
     kickoff_message: '',
     vector_stores: [],
-    openai_model: 'gpt-5-2025-08-07',
+    openai_model: 'gpt-4o',
     openai_service_tier: 'flex',
 });
 
@@ -52,11 +50,10 @@ const selectConfig = (config: BotConfig) => {
         selectedConfig.value = config;
         configForm.value = {
             prompt: config.prompt,
-            temperature: config.temperature || 0.7,
             max_tokens: config.max_tokens || 2000,
             kickoff_message: config.kickoff_message || '',
             vector_stores: config.vector_stores ? [...config.vector_stores] : [],
-            openai_model: config.openai_model || 'gpt-5-2025-08-07',
+            openai_model: config.openai_model || 'gpt-4o',
             openai_service_tier: config.openai_service_tier || 'flex',
         };
     }
@@ -182,7 +179,7 @@ const cancelEditing = () => {
 
                   <div class="config-section">
                     <h4>Модель OpenAI</h4>
-                    <div class="config-text"><code>{{ config.openai_model || 'gpt-5-2025-08-07' }}</code></div>
+                    <div class="config-text"><code>{{ config.openai_model || 'gpt-4o' }}</code></div>
                   </div>
 
                   <div class="config-section">
@@ -216,31 +213,16 @@ const cancelEditing = () => {
                   </div>
 
 
-                  <div class="form-row">
-                    <div class="form-group">
-                      <label class="form-label">Temperature</label>
-                      <input
-                        v-model.number="configForm.temperature"
-                        type="number"
-                        class="form-input"
-                        min="0"
-                        max="2"
-                        step="0.1"
-                      />
-                      <small class="form-help">Контролирует случайность ответов (0-2)</small>
-                    </div>
-
-                    <div class="form-group">
-                      <label class="form-label">Max Tokens</label>
-                      <input
-                        v-model.number="configForm.max_tokens"
-                        type="number"
-                        class="form-input"
-                        min="1"
-                        max="4000"
-                      />
-                      <small class="form-help">Максимальная длина ответа</small>
-                    </div>
+                  <div class="form-group">
+                    <label class="form-label">Max Tokens</label>
+                    <input
+                      v-model.number="configForm.max_tokens"
+                      type="number"
+                      class="form-input"
+                      min="1"
+                      max="4000"
+                    />
+                    <small class="form-help">Максимальная длина ответа</small>
                   </div>
 
                   <div class="form-row">
@@ -250,9 +232,9 @@ const cancelEditing = () => {
                         v-model="configForm.openai_model"
                         type="text"
                         class="form-input"
-                        placeholder="gpt-5-2025-08-07"
+                        placeholder="gpt-4o"
                       />
-                      <small class="form-help">Модель OpenAI для генерации ответов (например: gpt-5-2025-08-07, gpt-4o, gpt-4-turbo)</small>
+                      <small class="form-help">Модель OpenAI для генерации ответов (например: gpt-4o, gpt-4o-mini, gpt-4-turbo)</small>
                     </div>
 
                     <div class="form-group">

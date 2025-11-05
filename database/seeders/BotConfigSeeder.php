@@ -24,7 +24,7 @@ class BotConfigSeeder extends Seeder
                 ['name' => 'Основная база знаний', 'id' => 'vs_6904cd1ffdb081918e282ac233eb07ce'],
                 ['name' => 'База возражений', 'id' => 'vs_6904cd74ac8081918552c91c40527af9'],
             ],
-            'openai_model' => 'gpt-5-2025-08-07',
+            'openai_model' => 'gpt-4o',
             'openai_service_tier' => 'flex',
             'settings' => [],
         ]);
