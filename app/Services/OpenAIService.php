@@ -211,10 +211,6 @@ class OpenAIService
             'max_completion_tokens' => $maxTokens ?? 2000,
         ];
 
-        // Параметр temperature не добавляется, так как некоторые модели его не поддерживают
-        
-        // service_tier поддерживается только в Responses API, не в chat/completions
-        // Поэтому не добавляем его в payload
         try {
             $response = $this->getHttpClient()
                 ->connectTimeout(10)

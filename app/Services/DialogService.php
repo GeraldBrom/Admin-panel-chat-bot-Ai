@@ -78,6 +78,8 @@ class DialogService
             'formattedAddDate' => $objectData['formattedAddDate'] ?? '',
             'objectCount' => $objectData['objectCount'] ?? '',
             'address' => $objectData['address'] ?? '',
+            'price' => $objectData['price'] ?? '',
+            'formattedPrice' => $objectData['formattedPrice'] ?? '',
         ];
 
         // Подготовка метаданных для сессии и диалога
@@ -87,6 +89,9 @@ class DialogService
             'address' => $objectData['address'] ?? '',
             'object_count' => $objectData['objectCount'] ?? '',
             'add_date' => $objectData['formattedAddDate'] ?? '',
+            'price' => $objectData['price'] ?? '',
+            'formatted_price' => $objectData['formattedPrice'] ?? '',
+            'commission_client' => $objectData['commission_client'] ?? '',
             'phone' => $objectData['phone'] ?? '',
             'email' => $objectData['email'] ?? '',
             'initialized_at' => now()->toIso8601String(),
@@ -123,6 +128,9 @@ class DialogService
             
             // Рендеринг шаблона с переменными
             $renderedMessage = $this->renderTemplate($kickoffMessage, $vars);
+            
+            // Конвертируем Markdown в WhatsApp форматирование (если есть)
+            $renderedMessage = $this->convertMarkdownToWhatsApp($renderedMessage);
 
             // Отправка непосредственно клиенту БЕЗ GPT обработки
             if (!empty(trim($renderedMessage))) {
@@ -151,6 +159,7 @@ class DialogService
                         'address' => $vars['address'] ?? '',
                     ]
                 );
+                $fallback = $this->convertMarkdownToWhatsApp($fallback);
                 $this->sendMessageWithDelay($chatId, $fallback, 0);
                 Message::create([
                     'dialog_id' => $dialog->dialog_id,
@@ -294,6 +303,31 @@ class DialogService
             // Создать историю для одного вызова LLM
             $config = $session->bot_config_id ? BotConfig::find($session->bot_config_id) : null;
             $systemPrompt = $config?->prompt ?? 'Ты - профессионал ИИ-ассистент компании Capital Mars. Отвечай кратко, по делу.';
+            
+            // Добавляем контекст из metadata (цена, адрес и т.д.)
+            $metadata = $session->metadata ?? [];
+            if (!empty($metadata)) {
+                $contextInfo = "\n\n=== КОНТЕКСТ ОБЪЕКТА ===\n";
+                if (!empty($metadata['address'])) {
+                    $contextInfo .= "Адрес: {$metadata['address']}\n";
+                }
+                if (!empty($metadata['price'])) {
+                    $contextInfo .= "Цена аренды: {$metadata['price']} руб/мес\n";
+                }
+                if (!empty($metadata['formatted_price'])) {
+                    $contextInfo .= "Цена (форматированная): {$metadata['formatted_price']} руб/мес\n";
+                }
+                if (!empty($metadata['commission_client'])) {
+                    $contextInfo .= "Комиссия клиента: {$metadata['commission_client']}\n";
+                }
+                if (!empty($metadata['owner_name'])) {
+                    $contextInfo .= "Имя владельца: {$metadata['owner_name']}\n";
+                }
+                $contextInfo .= "=== КОНЕЦ КОНТЕКСТА ===\n";
+                
+                $systemPrompt .= $contextInfo;
+            }
+            
             $maxTokens = $config?->max_tokens;
             $model = $config?->openai_model ?? 'gpt-4o';
             $serviceTier = $config?->openai_service_tier ?? 'flex';
@@ -370,8 +404,11 @@ class DialogService
             ]);
 
             if ($assistantReply !== '') {
+                // Конвертируем Markdown в WhatsApp форматирование
+                $whatsappReply = $this->convertMarkdownToWhatsApp($assistantReply);
+                
                 // Send via provider
-                $this->sendMessageWithDelay($chatId, $assistantReply, 1200);
+                $this->sendMessageWithDelay($chatId, $whatsappReply, 1200);
 
                 // Save assistant message with previous_response_id
                 Message::create([
@@ -840,6 +877,34 @@ class DialogService
                 'error' => $e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * Конвертирует Markdown форматирование в WhatsApp форматирование
+     * 
+     * Markdown (от GPT):          WhatsApp:
+     * **жирный**                  *жирный*
+     * *курсив*                    _курсив_
+     * ~~зачеркнутый~~             ~зачеркнутый~
+     * `код`                       ```код```
+     */
+    private function convertMarkdownToWhatsApp(string $text): string
+    {
+        // 1. Конвертируем жирный: **текст** → *текст*
+        $text = preg_replace('/\*\*(.+?)\*\*/u', '*$1*', $text);
+        
+        // 2. Конвертируем курсив Markdown в курсив WhatsApp: *текст* → _текст_
+        // Но только если это не жирный текст из предыдущего шага
+        // Ищем одиночные звездочки, которые не являются частью жирного текста
+        $text = preg_replace('/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/u', '_$1_', $text);
+        
+        // 3. Конвертируем зачеркнутый: ~~текст~~ → ~текст~
+        $text = preg_replace('/~~(.+?)~~/u', '~$1~', $text);
+        
+        // 4. Конвертируем моноширинный: `код` → ```код```
+        $text = preg_replace('/`([^`]+?)`/u', '```$1```', $text);
+        
+        return $text;
     }
 
     /**
