@@ -201,14 +201,27 @@ class ChatKitService
 
     /**
      * Получить или создать сессию ChatKit
-     * При повторном вызове для существующей сессии - перезапускает её
+     * При повторном вызове для существующей сессии:
+     * - Если сессия активна (running) - возвращает её без изменений
+     * - Если сессия неактивна - перезапускает её
      */
     public function getOrCreateSession(string $chatId, int $objectId, string $platform = 'whatsapp'): ChatKitSession
     {
         $session = ChatKitSession::where('chat_id', $chatId)->first();
         
         if ($session) {
-            // Если сессия существует - обновляем её и перезапускаем
+            // Если сессия уже активна - просто возвращаем её
+            if ($session->status === 'running') {
+                Log::debug('ChatKit session already running', [
+                    'session_id' => $session->id,
+                    'chat_id' => $chatId,
+                ]);
+                return $session;
+            }
+            
+            // Если сессия остановлена - перезапускаем её
+            $previousStatus = $session->status;
+            
             $session->update([
                 'object_id' => $objectId,
                 'platform' => $platform,
@@ -221,6 +234,7 @@ class ChatKitService
             Log::info('ChatKit session restarted', [
                 'session_id' => $session->id,
                 'chat_id' => $chatId,
+                'previous_status' => $previousStatus,
             ]);
             
             return $session->fresh();
