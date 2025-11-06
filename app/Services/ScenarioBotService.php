@@ -233,6 +233,12 @@ class ScenarioBotService
 
         // Применяем рендеринг переменных к сообщению
         $vars = $this->getObjectVariables($session->object_id);
+        
+        // Добавляем новую цену из dialog_data если она есть
+        if (!empty($response['dialog_data']['new_price_formatted'])) {
+            $vars['price'] = $response['dialog_data']['new_price_formatted'];
+        }
+        
         $response['message'] = $this->renderTemplate($response['message'], $vars);
 
         // Сохраняем ответ бота в БД
@@ -264,13 +270,19 @@ class ScenarioBotService
     /**
      * Обработка конкретного шага сценария
      */
-    private function processScenarioStep(ScenarioBotSession $session, int $currentStep, string $userMessage, array $dialogData): array
+    private function processScenarioStep(ScenarioBotSession $session, $currentStep, string $userMessage, array $dialogData): array
     {
         $bot = $session->scenarioBot;
         $scenario = $bot->settings['scenario'] ?? [];
+        
+        Log::info('[ScenarioBotService] Шаг сценария', [
+            'current_step' => $currentStep,
+            'current_step_type' => gettype($currentStep),
+            'user_message' => $userMessage,
+        ]);
 
         // Шаг 1: Узнаем сдается ли квартира
-        if ($currentStep === 1) {
+        if ($currentStep == 1) {
             if (in_array($userMessage, ['да', 'yes', 'да!', 'yes!'])) {
                 $dialogData['step_1_answer'] = 'да';
                 $dialogData['is_rented'] = true;
@@ -301,7 +313,7 @@ class ScenarioBotService
         }
 
         // Шаг 2: Согласен ли работать с нами
-        if ($currentStep === 2) {
+        if ($currentStep == 2) {
             if (in_array($userMessage, ['да', 'yes', 'да!', 'yes!'])) {
                 $dialogData['step_2_answer'] = 'да';
                 $dialogData['agrees_to_work'] = true;
@@ -331,7 +343,7 @@ class ScenarioBotService
         }
 
         // Шаг 3: Проверка цены
-        if ($currentStep === 3) {
+        if ($currentStep == 3) {
             if (in_array($userMessage, ['да', 'yes', 'да!', 'yes!'])) {
                 $dialogData['step_3_answer'] = 'да';
                 $dialogData['price_confirmed'] = true;
@@ -370,11 +382,8 @@ class ScenarioBotService
                 $dialogData['new_price'] = $newPrice;
                 $dialogData['new_price_formatted'] = number_format($newPrice, 0, '.', ' ') . ' руб';
                 
-                $message = $scenario['step3_1_final_message'] ?? "Спасибо! Новая цена {price} сохранена.\n\nМы свяжемся с вами в ближайшее время.";
-                $message = str_replace('{price}', $dialogData['new_price_formatted'], $message);
-                
                 return [
-                    'message' => $message,
+                    'message' => $scenario['step3_1_final_message'] ?? "Спасибо! Новая цена {price} сохранена.\n\nМы свяжемся с вами в ближайшее время.",
                     'dialog_data' => $dialogData,
                     'completed' => true,
                 ];
