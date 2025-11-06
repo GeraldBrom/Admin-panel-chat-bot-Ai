@@ -8,7 +8,6 @@ use Illuminate\Support\Facades\Log;
 class OpenAIService
 {
     private string $apiKey;
-    private string $vectorStoreId;
     private bool $useProxy;
     private ?string $proxyHost;
     private ?string $proxyPort;
@@ -16,7 +15,6 @@ class OpenAIService
     public function __construct()
     {
         $this->apiKey = config('services.openai.api_key');
-        $this->vectorStoreId = config('services.openai.vector_store_id');
         $this->useProxy = config('services.openai.use_proxy', false);
         $this->proxyHost = config('services.openai.proxy_host');
         $this->proxyPort = config('services.openai.proxy_port');
