@@ -49,4 +49,8 @@ return [
         'proxy_port' => env('PROXY_PORT'),
     ],
 
+    'chatkit' => [
+        'agent_id' => env('AGENT_ID'),
+    ],
+
 ];

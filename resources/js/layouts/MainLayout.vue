@@ -65,6 +65,7 @@ onUnmounted(() => {
               <div class="nav-dropdown__menu" v-show="isChatsDropdownOpen">
                 <router-link to="/chat-bots" active-class="active" @click.stop="closeAllDropdowns">Чат боты Ai</router-link>
                 <router-link to="/scenario-bot-sessions" active-class="active" @click.stop="closeAllDropdowns">Сессии сценарных ботов</router-link>
+                <router-link to="/chatkit-sessions" active-class="active" @click.stop="closeAllDropdowns">ChatKit сессии</router-link>
               </div>
             </div>
             
