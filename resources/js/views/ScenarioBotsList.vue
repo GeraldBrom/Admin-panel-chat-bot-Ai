@@ -65,33 +65,34 @@ const getStatusBadge = (isActive: boolean) => {
         </div>
         
         <div class="bots-grid">
-        <div v-for="bot in bots" :key="bot.id" class="bot-card">
-          <div class="bot-card__header">
-            <div class="bot-card__title">
-              <span class="bot-icon">{{ getPlatformIcon(bot.platform) }}</span>
-              <h3>{{ bot.name }}</h3>
-            </div>
-            <div class="bot-card__badge" :class="{ 'badge--active': bot.is_active }">
-              {{ getStatusBadge(bot.is_active) }}
-            </div>
-          </div>
-
-          <div class="bot-card__body">
-            <p v-if="bot.description" class="bot-description">
-              {{ bot.description }}
-            </p>
-            <p v-else class="bot-description bot-description--empty">
-              Описание отсутствует
-            </p>
-
-            <div class="bot-stats">
-              <div class="bot-stat">
-                <span class="bot-stat__label">Платформа:</span>
-                <span class="bot-stat__value">{{ bot.platform }}</span>
+          <div v-for="bot in bots" :key="bot.id" class="bot-card">
+            <div class="bot-card__header">
+              <div class="bot-card__title">
+                <span class="bot-icon">{{ getPlatformIcon(bot.platform) }}</span>
+                <h3>{{ bot.name }}</h3>
               </div>
-              <div class="bot-stat">
-                <span class="bot-stat__label">Шагов:</span>
-                <span class="bot-stat__value">{{ bot.steps?.length || 0 }}</span>
+              <div class="bot-card__badge" :class="{ 'badge--active': bot.is_active }">
+                {{ getStatusBadge(bot.is_active) }}
+              </div>
+            </div>
+
+            <div class="bot-card__body">
+              <p v-if="bot.description" class="bot-description">
+                {{ bot.description }}
+              </p>
+              <p v-else class="bot-description bot-description--empty">
+                Описание отсутствует
+              </p>
+
+              <div class="bot-stats">
+                <div class="bot-stat">
+                  <span class="bot-stat__label">Платформа:</span>
+                  <span class="bot-stat__value">{{ bot.platform }}</span>
+                </div>
+                <div class="bot-stat">
+                  <span class="bot-stat__label">Шагов:</span>
+                  <span class="bot-stat__value">{{ bot.steps?.length || 0 }}</span>
+                </div>
               </div>
             </div>
           </div>
