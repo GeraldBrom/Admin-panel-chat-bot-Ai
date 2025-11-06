@@ -134,6 +134,9 @@ class GreenApiWebhookController extends Controller
                     // Проверяем, есть ли активная сессия сценарного бота
                     if ($this->processScenarioBotMessage($normalized['chatId'], $normalized['messageText'])) {
                         $processed++;
+                    } elseif ($this->processChatKitMessage($normalized['chatId'], $normalized['messageText'])) {
+                        // Проверяем, есть ли активная сессия ChatKit
+                        $processed++;
                     } else {
                         // Обрабатываем через AI-бота
                         $this->dialogService->processIncomingMessage(
