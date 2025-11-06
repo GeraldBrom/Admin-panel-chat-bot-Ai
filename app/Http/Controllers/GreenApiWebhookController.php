@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ScenarioBotSession;
 use App\Services\DialogService;
 use App\Services\GreenApiService;
+use App\Services\ScenarioBotService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -12,7 +14,8 @@ use Illuminate\Support\Facades\Cache;
 class GreenApiWebhookController extends Controller
 {
     public function __construct(
-        private DialogService $dialogService
+        private DialogService $dialogService,
+        private ScenarioBotService $scenarioBotService
     ) {}
 
     public function handle(Request $request): JsonResponse
@@ -81,6 +84,13 @@ class GreenApiWebhookController extends Controller
                         Cache::put($cacheKey, true, 3600);
                     }
                     
+                    // Проверяем, есть ли активная сессия сценарного бота
+                    if ($this->processScenarioBotMessage($normalized['chatId'], $normalized['messageText'])) {
+                        $processed++;
+                        continue;
+                    }
+                    
+                    // Обрабатываем через AI-бота
                     $this->dialogService->processIncomingMessage(
                         $normalized['chatId'],
                         $normalized['messageText'],
@@ -112,12 +122,18 @@ class GreenApiWebhookController extends Controller
                         Cache::put($cacheKey, true, 3600);
                     }
                     
-                    $this->dialogService->processIncomingMessage(
-                        $normalized['chatId'],
-                        $normalized['messageText'],
-                        $normalized['meta']
-                    );
-                    $processed++;
+                    // Проверяем, есть ли активная сессия сценарного бота
+                    if ($this->processScenarioBotMessage($normalized['chatId'], $normalized['messageText'])) {
+                        $processed++;
+                    } else {
+                        // Обрабатываем через AI-бота
+                        $this->dialogService->processIncomingMessage(
+                            $normalized['chatId'],
+                            $normalized['messageText'],
+                            $normalized['meta']
+                        );
+                        $processed++;
+                    }
                 }
             }
 
@@ -258,6 +274,76 @@ class GreenApiWebhookController extends Controller
             'messageText' => $messageText,
             'meta' => $meta,
         ];
+    }
+
+    /**
+     * Обработать сообщение через сценарного бота, если есть активная сессию
+     * 
+     * @return bool true если сообщение обработано сценарным ботом
+     */
+    private function processScenarioBotMessage(string $chatId, string $messageText): bool
+    {
+        // Проверяем, есть ли активная сессия сценарного бота для этого чата
+        $session = ScenarioBotSession::byChatId($chatId)
+            ->active()
+            ->first();
+
+        if (!$session) {
+            // Дополнительная проверка: может быть сессия есть, но не активна?
+            $anySession = ScenarioBotSession::byChatId($chatId)->first();
+            if ($anySession) {
+                Log::warning('[GreenAPI Webhook] 🔴 Найдена сессия, но она НЕ АКТИВНА!', [
+                    'chatId' => $chatId,
+                    'session_id' => $anySession->id,
+                    'current_status' => $anySession->status,
+                    'expected_status' => 'running',
+                    'updated_at' => $anySession->updated_at,
+                ]);
+            } else {
+                Log::info('[GreenAPI Webhook] 🔍 Сессия сценарного бота не найдена вообще', [
+                    'chatId' => $chatId,
+                ]);
+            }
+            return false;
+        }
+
+        Log::info('[GreenAPI Webhook] ✅ Найдена активная сессия сценарного бота!', [
+            'chatId' => $chatId,
+            'session_id' => $session->id,
+            'status' => $session->status,
+        ]);
+
+        try {
+            Log::info('[GreenAPI Webhook] Обрабатываем через сценарного бота', [
+                'chatId' => $chatId,
+                'session_id' => $session->id,
+                'scenario_bot_id' => $session->scenario_bot_id,
+            ]);
+
+            // Обрабатываем сообщение через сценарного бота
+            $response = $this->scenarioBotService->processMessage($chatId, $messageText);
+
+            if ($response) {
+                // Отправляем ответ пользователю через Green API
+                $greenApiService = app(GreenApiService::class);
+                $greenApiService->sendMessage($chatId, $response['message']);
+
+                Log::info('[GreenAPI Webhook] Отправлен ответ от сценарного бота', [
+                    'chatId' => $chatId,
+                    'step_id' => $response['step_id'] ?? null,
+                    'session_completed' => $response['session_completed'] ?? false,
+                ]);
+            }
+
+            return true;
+        } catch (\Exception $e) {
+            Log::error('[GreenAPI Webhook] Ошибка обработки сценарного бота', [
+                'chatId' => $chatId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            return false;
+        }
     }
 }
 

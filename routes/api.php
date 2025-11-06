@@ -59,4 +59,31 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/download', [LogController::class, 'download']);
         Route::post('/clear', [LogController::class, 'clear']);
     });
+
+    // Маршруты для сценарных ботов
+    Route::prefix('scenario-bots')->group(function () {
+        Route::get('/', [\App\Http\Controllers\ScenarioBotController::class, 'index']);
+        Route::post('/', [\App\Http\Controllers\ScenarioBotController::class, 'store']);
+        Route::get('/{id}', [\App\Http\Controllers\ScenarioBotController::class, 'show']);
+        Route::put('/{id}', [\App\Http\Controllers\ScenarioBotController::class, 'update']);
+        Route::delete('/{id}', [\App\Http\Controllers\ScenarioBotController::class, 'destroy']);
+        
+        // Управление сессиями
+        Route::post('/sessions/start', [\App\Http\Controllers\ScenarioBotController::class, 'startSession']);
+        Route::delete('/sessions/{chatId}/stop', [\App\Http\Controllers\ScenarioBotController::class, 'stopSession'])->where('chatId', '.*');
+        Route::post('/sessions/{chatId}/reset', [\App\Http\Controllers\ScenarioBotController::class, 'resetSession'])->where('chatId', '.*');
+        Route::get('/sessions/{chatId}', [\App\Http\Controllers\ScenarioBotController::class, 'getSession'])->where('chatId', '.*');
+        Route::get('/{id}/sessions', [\App\Http\Controllers\ScenarioBotController::class, 'getSessions']);
+        
+        // Управление шагами сценария
+        Route::prefix('{botId}/steps')->group(function () {
+            Route::get('/', [\App\Http\Controllers\ScenarioStepController::class, 'index']);
+            Route::post('/', [\App\Http\Controllers\ScenarioStepController::class, 'store']);
+            Route::get('/{stepId}', [\App\Http\Controllers\ScenarioStepController::class, 'show']);
+            Route::put('/{stepId}', [\App\Http\Controllers\ScenarioStepController::class, 'update']);
+            Route::delete('/{stepId}', [\App\Http\Controllers\ScenarioStepController::class, 'destroy']);
+            Route::post('/update-order', [\App\Http\Controllers\ScenarioStepController::class, 'updateOrder']);
+            Route::post('/update-positions', [\App\Http\Controllers\ScenarioStepController::class, 'updatePositions']);
+        });
+    });
 });

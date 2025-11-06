@@ -61,17 +61,13 @@ class RemoteDatabaseService
     private function fetchObjectDataFromDatabase(int $objectId): ?array
     {
         try {
-            // Оптимизированный запрос с JOIN - один запрос вместо четырёх
+            // Упрощенный запрос без info_on_site (эта таблица может быть повреждена)
             $result = DB::connection('mysql_remote')
                 ->table('objects as o')
                 ->leftJoin('object_owner_info as ooi', 'o.id', '=', 'ooi.object_id')
                 ->leftJoin(
                     DB::raw('(SELECT object_id, COUNT(*) as deal_count FROM deals GROUP BY object_id) as d'),
                     'o.id', '=', 'd.object_id'
-                )
-                ->leftJoin(
-                    DB::raw('(SELECT object_id, MAX(date_site) as last_date FROM info_on_site GROUP BY object_id) as ios'),
-                    'o.id', '=', 'ios.object_id'
                 )
                 ->where('o.id', $objectId)
                 ->select([
@@ -80,8 +76,7 @@ class RemoteDatabaseService
                     'o.price',
                     'o.commission_client',
                     'ooi.value as owner_name',
-                    DB::raw('COALESCE(d.deal_count, 0) as deal_count'),
-                    'ios.last_date'
+                    DB::raw('COALESCE(d.deal_count, 0) as deal_count')
                 ])
                 ->first();
 
@@ -97,7 +92,6 @@ class RemoteDatabaseService
             // Форматировать данные
             $dealCount = (int) $result->deal_count;
             $countWord = $this->getCountWord($dealCount);
-            $formattedDate = $this->formatDate($result->last_date);
             $formattedPrice = number_format($result->price, 0, '', ',');
 
             return [
@@ -106,8 +100,8 @@ class RemoteDatabaseService
                 'price' => $result->price,
                 'commission_client' => $result->commission_client,
                 'owner_name' => $result->owner_name ?? 'Клиент',
+                'count' => $countWord, // Для совместимости с ScenarioBotService
                 'objectCount' => $countWord,
-                'formattedAddDate' => $formattedDate,
                 'formattedPrice' => $formattedPrice,
             ];
         } catch (\Exception $e) {

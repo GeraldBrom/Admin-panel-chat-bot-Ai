@@ -3,3 +3,4 @@ export * from './user';
 export * from './auth';
 export * from './api';
 export * from './bot';
+export * from './scenarioBot';

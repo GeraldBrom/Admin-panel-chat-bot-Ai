@@ -70,6 +70,7 @@ export interface BotConfig {
     id: number;
     name: string;
     platform: 'whatsapp';
+    bot_type?: 'ai' | 'manual';
     prompt: string;
     scenario_description: string;
     max_tokens: number;
@@ -79,6 +80,7 @@ export interface BotConfig {
     vector_stores?: VectorStore[];
     openai_model?: string;
     openai_service_tier?: string;
+    manual_responses?: any[];
     settings?: Record<string, any>;
     created_at: string;
     updated_at: string;

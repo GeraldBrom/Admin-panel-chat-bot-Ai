@@ -2,8 +2,10 @@
 
 namespace App\Console\Commands;
 
+use App\Models\ScenarioBotSession;
 use App\Services\DialogService;
 use App\Services\GreenApiService;
+use App\Services\ScenarioBotService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -24,7 +26,11 @@ class PollGreenApiMessages extends Command
      */
     protected $description = 'Опрос GREEN-API lastIncomingMessages и обработка входящих сообщений';
 
-    public function handle(GreenApiService $greenApiService, DialogService $dialogService): int
+    public function handle(
+        GreenApiService $greenApiService, 
+        DialogService $dialogService,
+        ScenarioBotService $scenarioBotService
+    ): int
     {
         $minutes = (int) $this->option('minutes');
         $minutes = $minutes > 0 ? $minutes : 1;
@@ -52,6 +58,19 @@ class PollGreenApiMessages extends Command
                     continue;
                 }
 
+                // Сначала проверяем сценарного бота
+                if ($this->processScenarioBotMessage($normalized['chatId'], $normalized['messageText'], $scenarioBotService, $greenApiService)) {
+                    $this->line("[greenapi:poll] ✅ Обработано сценарным ботом: {$normalized['chatId']}");
+                    
+                    if ($id) {
+                        Cache::put("greenapi:processed:{$id}", true, now()->addMinutes(2));
+                    }
+                    
+                    $processed++;
+                    continue;
+                }
+
+                // Если нет сценарного бота - обрабатываем через AI
                 $dialogService->processIncomingMessage(
                     $normalized['chatId'],
                     $normalized['messageText'],
@@ -108,6 +127,58 @@ class PollGreenApiMessages extends Command
             'messageText' => $messageText,
             'meta' => $meta,
         ];
+    }
+
+    /**
+     * Обработать сообщение через сценарного бота, если есть активная сессия
+     * 
+     * @return bool true если сообщение обработано сценарным ботом
+     */
+    private function processScenarioBotMessage(
+        string $chatId, 
+        string $messageText, 
+        ScenarioBotService $scenarioBotService,
+        GreenApiService $greenApiService
+    ): bool
+    {
+        // Проверяем, есть ли активная сессия сценарного бота для этого чата
+        $session = ScenarioBotSession::byChatId($chatId)
+            ->active()
+            ->first();
+
+        if (!$session) {
+            return false;
+        }
+
+        try {
+            Log::info('[greenapi:poll] 🤖 Обрабатываем через сценарного бота', [
+                'chatId' => $chatId,
+                'session_id' => $session->id,
+                'scenario_bot_id' => $session->scenario_bot_id,
+            ]);
+
+            // Обрабатываем сообщение через сценарного бота
+            $response = $scenarioBotService->processMessage($chatId, $messageText);
+
+            if ($response) {
+                // Отправляем ответ пользователю через Green API
+                $greenApiService->sendMessage($chatId, $response['message']);
+
+                Log::info('[greenapi:poll] ✅ Отправлен ответ от сценарного бота', [
+                    'chatId' => $chatId,
+                    'session_completed' => $response['session_completed'] ?? false,
+                ]);
+            }
+
+            return true;
+        } catch (\Exception $e) {
+            Log::error('[greenapi:poll] ❌ Ошибка обработки сценарного бота', [
+                'chatId' => $chatId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            return false;
+        }
     }
 }
 

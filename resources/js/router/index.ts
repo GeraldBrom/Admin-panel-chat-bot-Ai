@@ -4,7 +4,10 @@ import authService from '@/services/authService';
 const Login = () => import('@/views/Login.vue');
 const Dashboard = () => import('@/views/Dashboard.vue');
 const ChatBots = () => import('@/views/ChatBots.vue');
-const BotManagement = () => import('@/views/BotManagement.vue');
+const BotManagementAi = () => import('@/views/BotManagementAi.vue');
+const ScenarioBotsList = () => import('@/views/ScenarioBotsList.vue');
+const ScenarioBotSessions = () => import('@/views/ScenarioBotSessions.vue');
+const ScenarioBotManagement = () => import('@/views/ScenarioBotManagement.vue');
 const Logs = () => import('@/views/Logs.vue');
 
 const routes: RouteRecordRaw[] = [
@@ -40,12 +43,39 @@ const routes: RouteRecordRaw[] = [
         },
     },
     {
-        path: '/bot-management',
-        name: 'bot-management',
-        component: BotManagement,
+        path: '/bot-management-ai',
+        name: 'bot-management-ai',
+        component: BotManagementAi, 
         meta: { 
             requiresAuth: true,
             title: 'Управление чат ботами',
+        },
+    },
+    {
+        path: '/scenario-bots',
+        name: 'scenario-bots-list',
+        component: ScenarioBotsList,
+        meta: { 
+            requiresAuth: true,
+            title: 'Сценарные боты',
+        },
+    },
+    {
+        path: '/scenario-bot-sessions',
+        name: 'scenario-bot-sessions',
+        component: ScenarioBotSessions,
+        meta: { 
+            requiresAuth: true,
+            title: 'Сессии сценарных ботов',
+        },
+    },
+    {
+        path: '/scenario-bot-management',
+        name: 'scenario-bot-management',
+        component: ScenarioBotManagement,
+        meta: { 
+            requiresAuth: true,
+            title: 'Управление сценарием ботов',
         },
     },
     {
