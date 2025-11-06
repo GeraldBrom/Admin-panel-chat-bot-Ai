@@ -46,9 +46,7 @@ const statusLabel = computed(() => {
         class="chat-bot-card" 
         :class="{ 'chat-bot-card--selected': selected }"
         @click="emit('select', bot)"
-    >
-        
-        
+    >        
         <div class="chat-bot-card__body">
             <div class="chat-bot-card__info">
                 <div class="info-item">
