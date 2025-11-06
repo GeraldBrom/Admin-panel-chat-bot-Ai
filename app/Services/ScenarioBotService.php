@@ -307,13 +307,8 @@ class ScenarioBotService
                 $dialogData['agrees_to_work'] = true;
                 $dialogData['current_step'] = 3;
                 
-                // Подставляем цену
-                $priceText = $scenario['step3_default_price'] ?? "100,000 руб";
-                $message = $scenario['step2_yes_response'] ?? "Актуальная цена {price}? Ответьте Да или Нет";
-                $message = str_replace('{price}', $priceText, $message);
-                
                 return [
-                    'message' => $message,
+                    'message' => $scenario['step2_yes_response'] ?? "Актуальная цена {formatted_price}? Ответьте Да или Нет",
                     'dialog_data' => $dialogData,
                     'completed' => false,
                 ];
@@ -357,9 +352,8 @@ class ScenarioBotService
                     'completed' => false,
                 ];
             } else {
-                $priceText = $scenario['step3_default_price'] ?? "100,000 руб";
                 return [
-                    'message' => "Пожалуйста, ответьте Да или Нет.\n\nАктуальная цена {$priceText}?",
+                    'message' => "Пожалуйста, ответьте Да или Нет.\n\nАктуальная цена {formatted_price}?",
                     'dialog_data' => $dialogData,
                     'completed' => false,
                 ];
