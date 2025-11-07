@@ -26,9 +26,6 @@ Route::prefix('auth')->group(function () {
 // Публичный вебхук от Green API (без аутентификации)
 Route::post('/greenapi/webhook', [GreenApiWebhookController::class, 'handle']);
 
-// Публичный вебхук для ChatKit Agent (без аутентификации)
-Route::post('/chatkit/webhook', [\App\Http\Controllers\ChatKitController::class, 'webhook']);
-
 // Защищенные маршруты (требуют авторизации)
 Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('auth')->group(function () {
@@ -88,15 +85,5 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('/update-order', [\App\Http\Controllers\ScenarioStepController::class, 'updateOrder']);
             Route::post('/update-positions', [\App\Http\Controllers\ScenarioStepController::class, 'updatePositions']);
         });
-    });
-
-    // Маршруты для ChatKit Agent
-    Route::prefix('chatkit')->group(function () {
-        Route::get('/sessions', [\App\Http\Controllers\ChatKitController::class, 'index']);
-        Route::post('/sessions/start', [\App\Http\Controllers\ChatKitController::class, 'start']);
-        Route::post('/sessions/stop-all', [\App\Http\Controllers\ChatKitController::class, 'stopAll']);
-        Route::get('/sessions/{chatId}', [\App\Http\Controllers\ChatKitController::class, 'show'])->where('chatId', '.*');
-        Route::delete('/sessions/{chatId}', [\App\Http\Controllers\ChatKitController::class, 'stop'])->where('chatId', '.*');
-        Route::delete('/sessions/{chatId}/clear', [\App\Http\Controllers\ChatKitController::class, 'clearSession'])->where('chatId', '.*');
     });
 });

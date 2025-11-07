@@ -3,11 +3,9 @@
 namespace App\Console\Commands;
 
 use App\Models\ScenarioBotSession;
-use App\Models\ChatKitSession;
 use App\Services\DialogService;
 use App\Services\GreenApiService;
 use App\Services\ScenarioBotService;
-use App\Services\ChatKitService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -31,8 +29,7 @@ class PollGreenApiMessages extends Command
     public function handle(
         GreenApiService $greenApiService, 
         DialogService $dialogService,
-        ScenarioBotService $scenarioBotService,
-        ChatKitService $chatKitService
+        ScenarioBotService $scenarioBotService
     ): int
     {
         $minutes = (int) $this->option('minutes');
@@ -73,19 +70,7 @@ class PollGreenApiMessages extends Command
                     continue;
                 }
 
-                // Проверяем ChatKit Agent
-                if ($this->processChatKitMessage($normalized['chatId'], $normalized['messageText'], $chatKitService, $greenApiService)) {
-                    $this->line("[greenapi:poll] ✅ Обработано ChatKit Agent: {$normalized['chatId']}");
-                    
-                    if ($id) {
-                        Cache::put("greenapi:processed:{$id}", true, now()->addMinutes(2));
-                    }
-                    
-                    $processed++;
-                    continue;
-                }
-
-                // Если нет ни сценарного, ни ChatKit - обрабатываем через обычный AI
+                // Если нет сценарного бота - обрабатываем через обычный AI
                 $dialogService->processIncomingMessage(
                     $normalized['chatId'],
                     $normalized['messageText'],
@@ -196,69 +181,6 @@ class PollGreenApiMessages extends Command
         }
     }
 
-    /**
-     * Обработать сообщение через ChatKit Agent, если есть активная сессия
-     * 
-     * @return bool true если сообщение обработано через ChatKit
-     */
-    private function processChatKitMessage(
-        string $chatId, 
-        string $messageText, 
-        ChatKitService $chatKitService,
-        GreenApiService $greenApiService
-    ): bool
-    {
-        // Проверяем, есть ли активная сессия ChatKit для этого чата
-        $session = ChatKitSession::where('chat_id', $chatId)
-            ->where('status', 'running')
-            ->first();
-
-        if (!$session) {
-            return false;
-        }
-
-        try {
-            Log::info('[greenapi:poll] 🤖 Обрабатываем через ChatKit Agent', [
-                'chatId' => $chatId,
-                'session_id' => $session->id,
-                'agent_id' => $session->agent_id,
-            ]);
-
-            // Обрабатываем сообщение через ChatKit Agent
-            $response = $chatKitService->handleIncomingMessage(
-                $chatId,
-                $messageText,
-                $session->object_id
-            );
-
-            if ($response && !empty($response['reply'])) {
-                // Отправляем ответ пользователю через Green API
-                $greenApiService->sendMessage($chatId, $response['reply']);
-
-                Log::info('[greenapi:poll] ✅ Отправлен ответ от ChatKit Agent', [
-                    'chatId' => $chatId,
-                    'reply_length' => mb_strlen($response['reply']),
-                    'intent' => $response['intent'] ?? null,
-                ]);
-                
-                return true;
-            }
-            
-            // Если ответ пустой - логируем и НЕ блокируем обработку другими ботами
-            Log::warning('[greenapi:poll] ChatKit Agent не вернул ответ', [
-                'chatId' => $chatId,
-            ]);
-            
-            return false;
-        } catch (\Exception $e) {
-            Log::error('[greenapi:poll] ❌ Ошибка обработки ChatKit', [
-                'chatId' => $chatId,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
-            return false;
-        }
-    }
 }
 
 

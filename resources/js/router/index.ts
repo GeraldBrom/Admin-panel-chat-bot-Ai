@@ -8,7 +8,6 @@ const BotManagementAi = () => import('@/views/BotManagementAi.vue');
 const ScenarioBotsList = () => import('@/views/ScenarioBotsList.vue');
 const ScenarioBotSessions = () => import('@/views/ScenarioBotSessions.vue');
 const ScenarioBotManagement = () => import('@/views/ScenarioBotManagement.vue');
-const ChatKitSessions = () => import('@/views/ChatKitSessions.vue');
 const Logs = () => import('@/views/Logs.vue');
 
 const routes: RouteRecordRaw[] = [
@@ -77,15 +76,6 @@ const routes: RouteRecordRaw[] = [
         meta: { 
             requiresAuth: true,
             title: 'Управление сценарием ботов',
-        },
-    },
-    {
-        path: '/chatkit-sessions',
-        name: 'chatkit-sessions',
-        component: ChatKitSessions,
-        meta: { 
-            requiresAuth: true,
-            title: 'ChatKit сессии',
         },
     },
     {

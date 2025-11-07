@@ -3,11 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\ScenarioBotSession;
-use App\Models\ChatKitSession;
 use App\Services\DialogService;
 use App\Services\GreenApiService;
 use App\Services\ScenarioBotService;
-use App\Services\ChatKitService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -17,8 +15,7 @@ class GreenApiWebhookController extends Controller
 {
     public function __construct(
         private DialogService $dialogService,
-        private ScenarioBotService $scenarioBotService,
-        private ChatKitService $chatKitService
+        private ScenarioBotService $scenarioBotService
     ) {}
 
     public function handle(Request $request): JsonResponse
@@ -93,12 +90,6 @@ class GreenApiWebhookController extends Controller
                         continue;
                     }
                     
-                    // Проверяем, есть ли активная сессия ChatKit
-                    if ($this->processChatKitMessage($normalized['chatId'], $normalized['messageText'])) {
-                        $processed++;
-                        continue;
-                    }
-                    
                     // Обрабатываем через AI-бота
                     $this->dialogService->processIncomingMessage(
                         $normalized['chatId'],
@@ -133,9 +124,6 @@ class GreenApiWebhookController extends Controller
                     
                     // Проверяем, есть ли активная сессия сценарного бота
                     if ($this->processScenarioBotMessage($normalized['chatId'], $normalized['messageText'])) {
-                        $processed++;
-                    } elseif ($this->processChatKitMessage($normalized['chatId'], $normalized['messageText'])) {
-                        // Проверяем, есть ли активная сессия ChatKit
                         $processed++;
                     } else {
                         // Обрабатываем через AI-бота
@@ -358,68 +346,6 @@ class GreenApiWebhookController extends Controller
         }
     }
 
-    /**
-     * Обработать сообщение через ChatKit Agent, если есть активная сессия
-     * 
-     * @return bool true если сообщение обработано через ChatKit
-     */
-    private function processChatKitMessage(string $chatId, string $messageText): bool
-    {
-        // Проверяем, есть ли активная сессия ChatKit для этого чата
-        $session = ChatKitSession::where('chat_id', $chatId)
-            ->where('status', 'running')
-            ->first();
-
-        if (!$session) {
-            Log::info('[GreenAPI Webhook] Сессия ChatKit не найдена', [
-                'chatId' => $chatId,
-            ]);
-            return false;
-        }
-
-        Log::info('[GreenAPI Webhook] ✅ Найдена активная сессия ChatKit!', [
-            'chatId' => $chatId,
-            'session_id' => $session->id,
-            'agent_id' => $session->agent_id,
-        ]);
-
-        try {
-            // Обрабатываем сообщение через ChatKit Agent
-            $response = $this->chatKitService->handleIncomingMessage(
-                $chatId,
-                $messageText,
-                $session->object_id
-            );
-
-            if ($response && !empty($response['reply'])) {
-                // Отправляем ответ пользователю через Green API
-                $greenApiService = app(GreenApiService::class);
-                $greenApiService->sendMessage($chatId, $response['reply']);
-
-                Log::info('[GreenAPI Webhook] ✅ Отправлен ответ от ChatKit Agent', [
-                    'chatId' => $chatId,
-                    'reply_length' => mb_strlen($response['reply']),
-                    'intent' => $response['intent'] ?? null,
-                ]);
-                
-                return true;
-            }
-            
-            // Если ответ пустой - логируем и НЕ блокируем обработку другими ботами
-            Log::warning('[GreenAPI Webhook] ChatKit Agent не вернул ответ', [
-                'chatId' => $chatId,
-            ]);
-            
-            return false;
-        } catch (\Exception $e) {
-            Log::error('[GreenAPI Webhook] Ошибка обработки ChatKit', [
-                'chatId' => $chatId,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
-            return false;
-        }
-    }
 }
 
 
