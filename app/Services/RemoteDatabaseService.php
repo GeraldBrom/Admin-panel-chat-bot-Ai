@@ -65,6 +65,8 @@ class RemoteDatabaseService
             $result = DB::connection('mysql_remote')
                 ->table('objects as o')
                 ->leftJoin('object_owner_info as ooi', 'o.id', '=', 'ooi.object_id')
+                ->leftJoin('houses as h', 'o.house_id', '=', 'h.house_id')
+                ->leftJoin('complex as c', 'h.complex_id', '=', 'c.id')
                 ->leftJoin(
                     DB::raw('(SELECT object_id, COUNT(*) as deal_count FROM deals GROUP BY object_id) as d'),
                     'o.id', '=', 'd.object_id'
@@ -76,6 +78,7 @@ class RemoteDatabaseService
                     'o.price',
                     'o.commission_client',
                     'ooi.value as owner_name',
+                    'c.name as complex_name',
                     DB::raw('COALESCE(d.deal_count, 0) as deal_count')
                 ])
                 ->first();
@@ -93,14 +96,21 @@ class RemoteDatabaseService
             $dealCount = (int) $result->deal_count;
             $countWord = $this->getCountWord($dealCount);
             $formattedPrice = number_format($result->price, 0, '.', ',');
+            
+            // Форматировать адрес с учетом ЖК (ЖК в начале)
+            $address = $result->address;
+            if (!empty($result->complex_name)) {
+                $address = 'ЖК ' . $result->complex_name . ', ' . $address;
+            }
 
             return [
                 'id' => $result->id,
-                'address' => $result->address,
+                'address' => $address,
                 'price' => $result->price,
                 'commission_client' => $result->commission_client,
                 'owner_name' => $result->owner_name ?? 'Клиент',
-                'count' => $countWord, // Для совместимости с ScenarioBotService
+                'complex_name' => $result->complex_name ?? null,
+                'count' => $countWord,
                 'objectCount' => $countWord,
                 'formattedPrice' => $formattedPrice,
             ];
