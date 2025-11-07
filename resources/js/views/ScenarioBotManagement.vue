@@ -9,26 +9,26 @@ const bots = computed(() => scenarioBotStore.scenarioBots);
 const loading = computed(() => scenarioBotStore.loading);
 const loadError = ref<string | null>(null);
 
-// Отдельные поля для каждого шага сценария
+// Отдельные поля для каждого шага сценария - все данные загружаются из БД
 const scenarioForm = ref({
     // Приветственное сообщение
     welcome_message: '',
     
     // Шаг 1: Сдается ли квартира
-    step1_question: 'Вы сдаете еще квартиру? Ответьте Да или Нет',
-    step1_yes_response: 'Вы согласны работать с нами? Ответьте Да или Нет',
-    step1_no_response: 'К сожалению, мы работаем только со сдаваемыми квартирами. Спасибо за ваше время!',
+    step1_question: '',
+    step1_yes_response: '',
+    step1_no_response: '',
     
     // Шаг 2: Согласен ли работать
-    step2_yes_response: 'Ваша цена актуальна {formatted_price}? Ответьте Да или Нет',
-    step2_no_response: 'Жаль, что вы отказались от работы с нами. Если передумаете - напишите нам!',
+    step2_yes_response: '',
+    step2_no_response: '',
     
     // Шаг 3: Проверка цены
-    step3_yes_response: 'Отлично! Цена подтверждена. Спасибо за информацию!\n\nМы свяжемся с вами в ближайшее время.',
-    step3_no_response: 'Укажите верную цену (например: 20000 или 20 тыс)',
+    step3_yes_response: '',
+    step3_no_response: '',
     
     // Шаг 3.1: Новая цена
-    step3_1_final_message: 'Спасибо! Новая цена {price} сохранена.\n\nМы свяжемся с вами в ближайшее время.',
+    step3_1_final_message: '',
 });
 
 onMounted(async () => {

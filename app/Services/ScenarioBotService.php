@@ -289,7 +289,7 @@ class ScenarioBotService
                 $dialogData['current_step'] = 2;
                 
                 return [
-                    'message' => $scenario['step1_yes_response'] ?? "Согласен ли работать с нами? Ответьте Да или Нет",
+                    'message' => $scenario['step1_yes_response'] ?? '',
                     'dialog_data' => $dialogData,
                     'completed' => false,
                 ];
@@ -298,14 +298,14 @@ class ScenarioBotService
                 $dialogData['is_rented'] = false;
                 
                 return [
-                    'message' => $scenario['step1_no_response'] ?? "К сожалению, мы работаем только со сдаваемыми квартирами. Спасибо за ваше время!",
+                    'message' => $scenario['step1_no_response'] ?? '',
                     'dialog_data' => $dialogData,
                     'completed' => true,
                 ];
             } else {
-                $question = $scenario['step1_question'] ?? "Узнаем сдается ли квартира?";
+                $question = $scenario['step1_question'] ?? '';
                 return [
-                    'message' => "Пожалуйста, ответьте Да или Нет.\n\n{$question}",
+                    'message' => $question ? "Пожалуйста, ответьте Да или Нет.\n\n{$question}" : '',
                     'dialog_data' => $dialogData,
                     'completed' => false,
                 ];
@@ -320,7 +320,7 @@ class ScenarioBotService
                 $dialogData['current_step'] = 3;
                 
                 return [
-                    'message' => $scenario['step2_yes_response'] ?? "Актуальная цена {formatted_price}? Ответьте Да или Нет",
+                    'message' => $scenario['step2_yes_response'] ?? '',
                     'dialog_data' => $dialogData,
                     'completed' => false,
                 ];
@@ -329,13 +329,14 @@ class ScenarioBotService
                 $dialogData['agrees_to_work'] = false;
                 
                 return [
-                    'message' => $scenario['step2_no_response'] ?? "Жаль, что вы отказались от работы с нами. Если передумаете - напишите нам!",
+                    'message' => $scenario['step2_no_response'] ?? '',
                     'dialog_data' => $dialogData,
                     'completed' => true,
                 ];
             } else {
+                $question = $scenario['step1_yes_response'] ?? '';
                 return [
-                    'message' => "Пожалуйста, ответьте Да или Нет.\n\nСогласен ли работать с нами?",
+                    'message' => $question ? "Пожалуйста, ответьте Да или Нет.\n\n{$question}" : '',
                     'dialog_data' => $dialogData,
                     'completed' => false,
                 ];
@@ -349,7 +350,7 @@ class ScenarioBotService
                 $dialogData['price_confirmed'] = true;
                 
                 return [
-                    'message' => $scenario['step3_yes_response'] ?? "Отлично! Цена подтверждена. Спасибо за информацию!\n\nМы свяжемся с вами в ближайшее время.",
+                    'message' => $scenario['step3_yes_response'] ?? '',
                     'dialog_data' => $dialogData,
                     'completed' => true,
                 ];
@@ -359,13 +360,14 @@ class ScenarioBotService
                 $dialogData['current_step'] = 3.1; // Переход на подшаг
                 
                 return [
-                    'message' => $scenario['step3_no_response'] ?? "Укажите верную цену (например: 20000 или 20 тыс)",
+                    'message' => $scenario['step3_no_response'] ?? '',
                     'dialog_data' => $dialogData,
                     'completed' => false,
                 ];
             } else {
+                $question = $scenario['step2_yes_response'] ?? '';
                 return [
-                    'message' => "Пожалуйста, ответьте Да или Нет.\n\nАктуальная цена {formatted_price}?",
+                    'message' => $question ? "Пожалуйста, ответьте Да или Нет.\n\n{$question}" : '',
                     'dialog_data' => $dialogData,
                     'completed' => false,
                 ];
@@ -383,13 +385,14 @@ class ScenarioBotService
                 $dialogData['new_price_formatted'] = number_format($newPrice, 0, '.', ' ') . ' руб';
                 
                 return [
-                    'message' => $scenario['step3_1_final_message'] ?? "Спасибо! Новая цена {price} сохранена.\n\nМы свяжемся с вами в ближайшее время.",
+                    'message' => $scenario['step3_1_final_message'] ?? '',
                     'dialog_data' => $dialogData,
                     'completed' => true,
                 ];
             } else {
+                $question = $scenario['step3_no_response'] ?? '';
                 return [
-                    'message' => "Пожалуйста, укажите цену числом (например: 20000 или 20 тыс)",
+                    'message' => $question ? "Пожалуйста, укажите цену числом.\n\n{$question}" : '',
                     'dialog_data' => $dialogData,
                     'completed' => false,
                 ];
