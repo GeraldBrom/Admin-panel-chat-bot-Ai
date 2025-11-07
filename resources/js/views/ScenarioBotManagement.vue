@@ -116,7 +116,7 @@ const saveConfig = async () => {
 
 Я — чат бот Capital Mars. Мы уже {objectCount} сдавали вашу квартиру на {address}. Видим, что объявление снова актуально — верно? Если да, готовы подключиться к сдаче. Ответь пожалуйста Да или нет."
             />
-            <small class="form-help">Это сообщение получит клиент при создании сессии. Используйте переменные: {ownernameclean}, {address}, {objectCount}, {formatted_price}</small>
+            <small class="form-help">Это сообщение получит клиент при создании сессии. Используйте переменные: {ownernameclean}, {address}, {objectCount}, {price} (формат: 95,000)</small>
           </div>
         </div>
 
@@ -170,9 +170,9 @@ const saveConfig = async () => {
                 v-model="scenarioForm.step2_yes_response"
                 class="form-textarea"
                 rows="3"
-                placeholder="Ваша цена актуальна {formatted_price}? Ответьте Да или Нет"
+                placeholder="Ваша цена актуальна {price}? Ответьте Да или Нет"
               />
-              <small class="form-help">Переход на Шаг 3. Используйте {formatted_price} для подстановки цены из БД</small>
+              <small class="form-help">Переход на Шаг 3. Используйте {price} для подстановки цены из БД (формат: 95,000)</small>
             </div>
 
             <div class="form-group">
@@ -229,7 +229,7 @@ const saveConfig = async () => {
               rows="3"
               placeholder="Спасибо! Новая цена {price} сохранена."
             />
-            <small class="form-help">Используйте {price} для подстановки указанной цены. Завершение диалога</small>
+            <small class="form-help">Используйте {price} для подстановки указанной цены (формат: 95,000 руб). Завершение диалога</small>
           </div>
         </div>
       </div>

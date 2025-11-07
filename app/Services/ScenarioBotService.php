@@ -382,7 +382,7 @@ class ScenarioBotService
             if (!empty($priceStr)) {
                 $newPrice = (int)$priceStr;
                 $dialogData['new_price'] = $newPrice;
-                $dialogData['new_price_formatted'] = number_format($newPrice, 0, '.', ' ') . ' руб';
+                $dialogData['new_price_formatted'] = number_format($newPrice, 0, '.', ',') . ' руб';
                 
                 return [
                     'message' => $scenario['step3_1_final_message'] ?? '',
@@ -526,14 +526,16 @@ class ScenarioBotService
             $ownerNameClean = $this->extractOwnerName($ownerNameRaw);
 
             // Формируем переменные как в DialogService (поддерживаем оба формата: с подчеркиванием и без)
+            $formattedPrice = isset($objectData['price']) ? number_format($objectData['price'], 0, '.', ',') : '';
+            
             return [
                 'owner_name' => $ownerNameRaw,
                 'owner_name_clean' => $ownerNameClean,
                 'ownernameclean' => $ownerNameClean, // Альтернативное написание без подчеркиваний
                 'ownername' => $ownerNameClean,
                 'address' => $objectData['address'] ?? '',
-                'price' => $objectData['price'] ?? '',
-                'formatted_price' => isset($objectData['price']) ? number_format($objectData['price'], 0, '.', ' ') : '',
+                'price' => $formattedPrice, // Теперь price тоже отформатирована
+                'formatted_price' => $formattedPrice, // Для обратной совместимости
                 'commission_client' => $objectData['commission_client'] ?? '',
                 'objectCount' => $objectData['count'] ?? '0',
                 'object_count' => $objectData['count'] ?? '0',

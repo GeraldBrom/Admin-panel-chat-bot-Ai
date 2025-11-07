@@ -286,7 +286,7 @@ class ChatKitService
                 $vars = [
                     'owner_name_clean' => $objectData['owner_name'] ?? $defaults['owner_name_clean'],
                     'address' => $objectData['address'] ?? $defaults['address'],
-                    'price' => $objectData['price'] ? number_format($objectData['price'], 0, ',', ' ') . ' ₽' : $defaults['price'],
+                    'price' => $objectData['price'] ? number_format($objectData['price'], 0, '.', ',') . ' ₽' : $defaults['price'],
                     'commission_text' => $objectData['commission_text'] ?? $defaults['commission_text'],
                     'objectCount' => $objectData['objectCount'] ?? 1,
                 ];

@@ -92,7 +92,7 @@ class RemoteDatabaseService
             // Форматировать данные
             $dealCount = (int) $result->deal_count;
             $countWord = $this->getCountWord($dealCount);
-            $formattedPrice = number_format($result->price, 0, '', ',');
+            $formattedPrice = number_format($result->price, 0, '.', ',');
 
             return [
                 'id' => $result->id,
