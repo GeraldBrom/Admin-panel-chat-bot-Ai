@@ -14,7 +14,6 @@ defineProps<Props>();
         <slot name="messages">
             <MessageList :messages="messages" />
         </slot>
-
     </div>
 </template>
 

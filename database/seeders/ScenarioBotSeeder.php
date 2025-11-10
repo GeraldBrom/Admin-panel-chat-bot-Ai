@@ -17,7 +17,7 @@ class ScenarioBotSeeder extends Seeder
             ],
             [
                 'description' => 'Основной сценарный бот для WhatsApp - проверка аренды квартиры',
-                'welcome_message' => "{ownernameclean}, добрый день!\n\nЯ — чат бот Capital Mars. Мы уже {objectCount} сдавали вашу квартиру на {address}. Видим, что объявление снова актуально — верно? Если да, готовы подключиться к сдаче. Ответь пожалуйста Да или нет.",
+                'welcome_message' => "{ownernameclean}, добрый день!\n\nЯ — ИИ-ассистент Capital Mars. Мы уже {rental_phrase} {address}. {ownernameclean}, что объявление снова актуально — верно? Если да, готовы подключиться к сдаче.",
                 'is_active' => true,
                 'settings' => [
                     'scenario' => [

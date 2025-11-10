@@ -6,6 +6,8 @@
     flex-direction: column;
     height: 100%;
     flex: 1;
+    min-height: 0; // Важно для работы flex и overflow в дочерних элементах
+    overflow: hidden; // Предотвращаем выход за границы
     
     &__input {
         display: flex;
@@ -13,6 +15,7 @@
         padding: $spacing-md;
         background: $bg-white;
         border-top: 1px solid $border-color;
+        flex-shrink: 0; // Не сжимать инпут при переполнении
     }
 }
 

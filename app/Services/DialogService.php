@@ -70,16 +70,32 @@ class DialogService
         $rawName = $objectData['owner_name'] ?? 'Клиент';
         $cleanedName = $this->extractOwnerName($rawName);
 
+        // Получаем числовое значение deal_count для условной логики
+        $dealCount = (int) ($objectData['deal_count'] ?? 0);
+        $objectCountWord = $objectData['objectCount'] ?? '0';
+        $objectCountWithSuffix = $objectData['objectCountWithSuffix'] ?? '0 раз';
+        
+        // Условная логика: формируем текст в зависимости от количества сделок
+        if ($dealCount === 0) {
+            // Если сделок не было - используем другой текст без упоминания количества
+            $rentalPhrase = "работали с вами по квартире на";
+        } else {
+            // Если были сделки - указываем количество со склонением
+            $rentalPhrase = "{$objectCountWithSuffix} сдавали вашу квартиру на";
+        }
+
         // Подготовка переменных для шаблонов
         $vars = [
             'name' => $cleanedName,
             'owner_name' => $cleanedName,
             'owner_name_clean' => $cleanedName,
+            'ownernameclean' => $cleanedName,
             'formattedAddDate' => $objectData['formattedAddDate'] ?? '',
-            'objectCount' => $objectData['objectCount'] ?? '',
+            'objectCount' => $objectCountWord,
             'address' => $objectData['address'] ?? '',
             'price' => $objectData['price'] ?? '',
             'formattedPrice' => $objectData['formattedPrice'] ?? '',
+            'rental_phrase' => $rentalPhrase,
         ];
 
         // Подготовка метаданных для сессии и диалога
@@ -124,7 +140,7 @@ class DialogService
 
             // Используем kickoff_message из конфигурации или дефолтное значение (если нет, используем дефолтное)
             $kickoffMessage = $config?->kickoff_message 
-                ?? "{owner_name_clean}, добрый день!\n\nЯ — ИИ-ассистент Capital Mars. Мы уже {objectCount} сдавали вашу квартиру на {address}. Видим, что объявление снова актуально — верно? Если да, готовы подключиться к сдаче.";
+                ?? "{ownernameclean}, добрый день!\n\nЯ — ИИ-ассистент Capital Mars. Мы уже {rental_phrase} {address}. {ownernameclean}, что объявление снова актуально — верно? Если да, готовы подключиться к сдаче.";
             
             // Рендеринг шаблона с переменными
             $renderedMessage = $this->renderTemplate($kickoffMessage, $vars);
@@ -386,7 +402,7 @@ class DialogService
                     null,
                     null,
                     $model
-                    // chat/completions не поддерживает service_tier, поэтому не передаем
+                    
                 );
             }
             $elapsedTime = round((microtime(true) - $startTime) * 1000); // ms

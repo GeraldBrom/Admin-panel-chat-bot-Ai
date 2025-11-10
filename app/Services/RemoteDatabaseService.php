@@ -95,11 +95,15 @@ class RemoteDatabaseService
             // Форматировать данные
             $dealCount = (int) $result->deal_count;
             $countWord = $this->getCountWord($dealCount);
+            $countWordWithSuffix = $this->getCountWordWithSuffix($dealCount);
             $formattedPrice = number_format($result->price, 0, '.', ',');
             
             // Форматировать адрес с учетом ЖК (ЖК в начале)
             $address = $result->address;
-            if (!empty($result->complex_name)) {
+            // Добавляем ЖК только если название есть и оно не является дефолтным значением
+            if (!empty($result->complex_name) && 
+                !str_contains(mb_strtolower($result->complex_name), 'нет названия') &&
+                !str_contains(mb_strtolower($result->complex_name), 'без названия')) {
                 $address = 'ЖК ' . $result->complex_name . ', ' . $address;
             }
 
@@ -110,8 +114,10 @@ class RemoteDatabaseService
                 'commission_client' => $result->commission_client,
                 'owner_name' => $result->owner_name ?? 'Клиент',
                 'complex_name' => $result->complex_name ?? null,
+                'deal_count' => $dealCount, // Числовое значение количества сделок
                 'count' => $countWord,
                 'objectCount' => $countWord,
+                'objectCountWithSuffix' => $countWordWithSuffix, // Со склонением "раз/раза"
                 'formattedPrice' => $formattedPrice,
             ];
         } catch (\Exception $e) {
@@ -123,7 +129,7 @@ class RemoteDatabaseService
     }
 
     /**
-     * Получить слово-числительное для количества сделок
+     * Получить слово-числительное для количества сделок (без склонения "раз")
      */
     private function getCountWord(int $count): string
     {
@@ -134,6 +140,36 @@ class RemoteDatabaseService
 
         // Для больших чисел используем склонение
         return $this->getDeclensionForCount($count);
+    }
+
+    /**
+     * Получить слово-числительное со склонением "раз/раза"
+     */
+    private function getCountWordWithSuffix(int $count): string
+    {
+        $lastDigit = $count % 10;
+        $lastTwoDigits = $count % 100;
+        
+        // Получаем текстовое представление числа
+        $countWord = $this->getCountWord($count);
+        
+        // Для нуля возвращаем без склонения
+        if ($count === 0) {
+            return $countWord;
+        }
+        
+        // Определяем правильное склонение слова "раз"
+        if ($lastTwoDigits >= 11 && $lastTwoDigits <= 19) {
+            $suffix = 'раз';
+        } else {
+            $suffix = match ($lastDigit) {
+                1 => 'раз',
+                2, 3, 4 => 'раза',
+                default => 'раз',
+            };
+        }
+        
+        return "{$countWord} {$suffix}";
     }
 
     /**

@@ -528,6 +528,20 @@ class ScenarioBotService
             // Формируем переменные как в DialogService (поддерживаем оба формата: с подчеркиванием и без)
             $formattedPrice = isset($objectData['price']) ? number_format($objectData['price'], 0, '.', ',') : '';
             
+            // Получаем числовое значение deal_count для условной логики
+            $dealCount = (int) ($objectData['deal_count'] ?? 0);
+            $objectCountWord = $objectData['count'] ?? '0';
+            $objectCountWithSuffix = $objectData['objectCountWithSuffix'] ?? '0 раз';
+            
+            // Условная логика: формируем текст в зависимости от количества сделок
+            if ($dealCount === 0) {
+                // Если сделок не было - используем другой текст без упоминания количества
+                $rentalPhrase = "работали с вами по квартире на";
+            } else {
+                // Если были сделки - указываем количество со склонением
+                $rentalPhrase = "{$objectCountWithSuffix} сдавали вашу квартиру на";
+            }
+            
             return [
                 'owner_name' => $ownerNameRaw,
                 'owner_name_clean' => $ownerNameClean,
@@ -537,8 +551,9 @@ class ScenarioBotService
                 'price' => $formattedPrice, // Теперь price тоже отформатирована
                 'formatted_price' => $formattedPrice, // Для обратной совместимости
                 'commission_client' => $objectData['commission_client'] ?? '',
-                'objectCount' => $objectData['count'] ?? '0',
-                'object_count' => $objectData['count'] ?? '0',
+                'objectCount' => $objectCountWord,
+                'object_count' => $objectCountWord,
+                'rental_phrase' => $rentalPhrase, // Условная фраза для приветственного сообщения
             ];
         } catch (\Exception $e) {
             Log::error('[ScenarioBotService] Ошибка получения данных объекта', [

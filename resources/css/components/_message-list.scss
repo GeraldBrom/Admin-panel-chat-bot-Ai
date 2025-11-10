@@ -6,6 +6,7 @@
     overflow-y: auto;
     padding: $spacing-md;
     background: $bg-gray-50;
+    min-height: 0; // Важно для работы flex и overflow
     
     &__items {
         display: flex;
