@@ -33,6 +33,7 @@ class OpenAIService
      * @param array $vectorStoreIds Массив ID векторных хранилищ (например: ['vs_abc123', 'vs_xyz789'])
      * @param string|null $model Модель OpenAI (по умолчанию gpt-4o)
      * @param string|null $serviceTier Уровень сервиса: 'auto', 'default', 'flex' (по умолчанию 'flex')
+     * @param float|null $topP Параметр top_p (0.0-1.0) - альтернатива temperature для контроля разнообразия
      * 
      * @return array ['content' => string, 'response_id' => string|null, 'usage' => ['prompt_tokens'=>int,'completion_tokens'=>int]]
      */
@@ -43,7 +44,8 @@ class OpenAIService
         ?int $maxTokens = null,
         array $vectorStoreIds = [],
         ?string $model = null,
-        ?string $serviceTier = null
+        ?string $serviceTier = null,
+        ?float $topP = null
     ): array {
         
         $input = [];
@@ -72,7 +74,13 @@ class OpenAIService
             'service_tier' => $serviceTier ?? 'flex',
         ];
 
-        // Параметр temperature не добавляется, так как некоторые модели его не поддерживают
+        // Добавляем temperature и topP если они указаны
+        if ($temperature !== null) {
+            $payload['temperature'] = $temperature;
+        }
+        if ($topP !== null) {
+            $payload['top_p'] = $topP;
+        }
 
         // Если указаны Vector Stores, добавляем File Search tool
         // OpenAI автоматически будет искать релевантные документы в указанных базах
@@ -135,13 +143,16 @@ class OpenAIService
                     ]);
                     
                     // Fallback на chat/completions API, если Responses API не вернул message
-                    return $this->chat($systemPrompt, $history, $temperature, $maxTokens, null, null, $model);
+                    return $this->chat($systemPrompt, $history, $temperature, $maxTokens, null, null, $model, $topP);
                 }
 
                 Log::info('✅ OpenAI Responses API успешный ответ с RAG', [
                     'response_id' => $responseId,
                     'content_length' => mb_strlen($content),
                     'vector_stores_used' => count($vectorStoreIds),
+                    'model' => $modelName,
+                    'temperature' => $temperature,
+                    'top_p' => $topP,
                     'usage' => $usage,
                 ]);
 
@@ -160,19 +171,28 @@ class OpenAIService
             Log::warning('OpenAI Responses API timeout/connection error, falling back to chat/completions ошибка таймаута или проблем с соединением', [
                 'error' => $e->getMessage()
             ]);
-            return $this->chat($systemPrompt, $history, $temperature, $maxTokens, null, null, $model);
+            return $this->chat($systemPrompt, $history, $temperature, $maxTokens, null, null, $model, $topP);
         } catch (\Throwable $e) {
             Log::error('OpenAI chatWithRag exception ошибка', [ 'error' => $e->getMessage() ]);
         }
 
-        return $this->chat($systemPrompt, $history, $temperature, $maxTokens, null, null, $model);
+        return $this->chat($systemPrompt, $history, $temperature, $maxTokens, null, null, $model, $topP);
     }
 
     /**
      * Единая точка входа для чата: системный промпт + история → ответ ассистента
      * Возвращает массив: ['content' => string, 'response_id' => string|null, 'usage' => ['prompt_tokens'=>int,'completion_tokens'=>int]]
+     * 
+     * @param string $systemPrompt Системный промпт
+     * @param array $history История диалога
+     * @param float|null $temperature Температура (0.0-2.0)
+     * @param int|null $maxTokens Максимальное количество токенов
+     * @param string|null $vectorStoreIdMain ID основного векторного хранилища (deprecated, используйте chatWithRag)
+     * @param string|null $vectorStoreIdObjections ID векторного хранилища возражений (deprecated, используйте chatWithRag)
+     * @param string|null $model Модель OpenAI
+     * @param float|null $topP Параметр top_p (0.0-1.0)
      */
-    public function chat(string $systemPrompt, array $history, ?float $temperature = null, ?int $maxTokens = null, ?string $vectorStoreIdMain = null, ?string $vectorStoreIdObjections = null, ?string $model = null): array
+    public function chat(string $systemPrompt, array $history, ?float $temperature = null, ?int $maxTokens = null, ?string $vectorStoreIdMain = null, ?string $vectorStoreIdObjections = null, ?string $model = null, ?float $topP = null): array
     {
         $messages = [];
         $systemParts = $systemPrompt;
@@ -208,6 +228,14 @@ class OpenAIService
             'messages' => $messages,
             'max_completion_tokens' => $maxTokens ?? 2000,
         ];
+
+        // Добавляем temperature и topP если они указаны
+        if ($temperature !== null) {
+            $payload['temperature'] = $temperature;
+        }
+        if ($topP !== null) {
+            $payload['top_p'] = $topP;
+        }
 
         try {
             $response = $this->getHttpClient()
@@ -251,6 +279,94 @@ class OpenAIService
             'response_id' => null,
             'usage' => ['prompt_tokens' => 0, 'completion_tokens' => 0],
         ];
+    }
+
+    /**
+     * Подстановка переменных в промпт из контекста
+     * 
+     * Заменяет плейсхолдеры вида ${variable_name} или {variable_name} на значения из массива контекста.
+     * Например: "${stateOwnerNameClean}" заменится на значение из $context['stateOwnerNameClean']
+     * 
+     * @param string $prompt Промпт с плейсхолдерами
+     * @param array $context Ассоциативный массив переменных для подстановки
+     * 
+     * @return string Промпт с подставленными значениями
+     */
+    public function replacePromptVariables(string $prompt, array $context): string
+    {
+        $result = $prompt;
+        
+        foreach ($context as $key => $value) {
+            // Преобразуем значение в строку
+            $stringValue = is_array($value) || is_object($value) 
+                ? json_encode($value, JSON_UNESCAPED_UNICODE) 
+                : (string) $value;
+            
+            // Заменяем плейсхолдеры в разных форматах: ${key}, {key}
+            $result = str_replace('${' . $key . '}', $stringValue, $result);
+            $result = str_replace('{' . $key . '}', $stringValue, $result);
+        }
+        
+        return $result;
+    }
+
+    /**
+     * Поиск в векторном хранилище
+     * 
+     * Выполняет семантический поиск в указанном векторном хранилище OpenAI.
+     * 
+     * @param string $vectorStoreId ID векторного хранилища (например: 'vs_abc123')
+     * @param string $query Поисковый запрос
+     * @param int $maxResults Максимальное количество результатов (по умолчанию 10)
+     * 
+     * @return array Массив результатов: [['file_id' => string, 'filename' => string, 'score' => float], ...]
+     */
+    public function searchVectorStore(string $vectorStoreId, string $query, int $maxResults = 10): array
+    {
+        try {
+            $payload = [
+                'query' => $query,
+                'max_num_results' => $maxResults,
+            ];
+
+            $response = $this->getHttpClient()
+                ->post("{$this->getBaseUrl()}/vector_stores/{$vectorStoreId}/search", $payload);
+
+            if ($response->successful()) {
+                $data = $response->json('data', []);
+                
+                $results = [];
+                foreach ($data as $item) {
+                    $results[] = [
+                        'file_id' => $item['file_id'] ?? '',
+                        'filename' => $item['filename'] ?? '',
+                        'score' => (float) ($item['score'] ?? 0.0),
+                    ];
+                }
+
+                Log::info('✅ OpenAI Vector Store поиск успешен', [
+                    'vector_store_id' => $vectorStoreId,
+                    'query_length' => mb_strlen($query),
+                    'results_count' => count($results),
+                ]);
+
+                return $results;
+            }
+
+            Log::error('OpenAI Vector Store поиск failed', [
+                'vector_store_id' => $vectorStoreId,
+                'status' => $response->status(),
+                'body' => $response->body(),
+            ]);
+
+        } catch (\Throwable $e) {
+            Log::error('OpenAI Vector Store поиск exception', [
+                'vector_store_id' => $vectorStoreId,
+                'error' => $e->getMessage()
+            ]);
+        }
+
+        return [];
     }
 
     /**
