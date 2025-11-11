@@ -25,17 +25,6 @@ class OpenAIService
      * 
      * OpenAI File Search автоматически ищет релевантные документы в указанных Vector Stores
      * и использует их для генерации более точных ответов на основе ваших данных.
-     * 
-     * @param string $systemPrompt Системный промпт для ассистента
-     * @param array $history История диалога [['role' => 'user|assistant', 'content' => '...']]
-     * @param float|null $temperature Температура (0.0-2.0) - контролирует случайность ответов
-     * @param int|null $maxTokens Максимальное количество токенов в ответе
-     * @param array $vectorStoreIds Массив ID векторных хранилищ (например: ['vs_abc123', 'vs_xyz789'])
-     * @param string|null $model Модель OpenAI (по умолчанию gpt-4o)
-     * @param string|null $serviceTier Уровень сервиса: 'auto', 'default', 'flex' (по умолчанию 'flex')
-     * @param float|null $topP Параметр top_p (0.0-1.0) - альтернатива temperature для контроля разнообразия
-     * 
-     * @return array ['content' => string, 'response_id' => string|null, 'usage' => ['prompt_tokens'=>int,'completion_tokens'=>int]]
      */
     public function chatWithRag(
         string $systemPrompt,
@@ -183,14 +172,6 @@ class OpenAIService
      * Единая точка входа для чата: системный промпт + история → ответ ассистента
      * Возвращает массив: ['content' => string, 'response_id' => string|null, 'usage' => ['prompt_tokens'=>int,'completion_tokens'=>int]]
      * 
-     * @param string $systemPrompt Системный промпт
-     * @param array $history История диалога
-     * @param float|null $temperature Температура (0.0-2.0)
-     * @param int|null $maxTokens Максимальное количество токенов
-     * @param string|null $vectorStoreIdMain ID основного векторного хранилища (deprecated, используйте chatWithRag)
-     * @param string|null $vectorStoreIdObjections ID векторного хранилища возражений (deprecated, используйте chatWithRag)
-     * @param string|null $model Модель OpenAI
-     * @param float|null $topP Параметр top_p (0.0-1.0)
      */
     public function chat(string $systemPrompt, array $history, ?float $temperature = null, ?int $maxTokens = null, ?string $vectorStoreIdMain = null, ?string $vectorStoreIdObjections = null, ?string $model = null, ?float $topP = null): array
     {
@@ -286,11 +267,6 @@ class OpenAIService
      * 
      * Заменяет плейсхолдеры вида ${variable_name} или {variable_name} на значения из массива контекста.
      * Например: "${stateOwnerNameClean}" заменится на значение из $context['stateOwnerNameClean']
-     * 
-     * @param string $prompt Промпт с плейсхолдерами
-     * @param array $context Ассоциативный массив переменных для подстановки
-     * 
-     * @return string Промпт с подставленными значениями
      */
     public function replacePromptVariables(string $prompt, array $context): string
     {
@@ -314,12 +290,6 @@ class OpenAIService
      * Поиск в векторном хранилище
      * 
      * Выполняет семантический поиск в указанном векторном хранилище OpenAI.
-     * 
-     * @param string $vectorStoreId ID векторного хранилища (например: 'vs_abc123')
-     * @param string $query Поисковый запрос
-     * @param int $maxResults Максимальное количество результатов (по умолчанию 10)
-     * 
-     * @return array Массив результатов: [['file_id' => string, 'filename' => string, 'score' => float], ...]
      */
     public function searchVectorStore(string $vectorStoreId, string $query, int $maxResults = 10): array
     {
