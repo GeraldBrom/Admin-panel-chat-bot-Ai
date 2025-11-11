@@ -152,60 +152,70 @@ class DialogService
 
         Log::info("Диалог инициализирован для chatId: {$chatId}");
 
-        // Отправка стартового сообщения непосредственно клиенту (без GPT обработки)
-        try {
-            $config = $botConfigId ? BotConfig::find($botConfigId) : null;
+        // Проверяем, есть ли уже сообщения в диалоге
+        $existingMessagesCount = Message::where('dialog_id', $dialog->dialog_id)->count();
+        
+        // Отправка стартового сообщения только если диалог пустой (первый запуск)
+        if ($existingMessagesCount === 0) {
+            try {
+                $config = $botConfigId ? BotConfig::find($botConfigId) : null;
 
-            // Используем kickoff_message из конфигурации или дефолтное значение (если нет, используем дефолтное)
-            $kickoffMessage = $config?->kickoff_message 
-                ?? "{greeting}\n\nЯ — ИИ-ассистент Capital Mars. Мы уже {rental_phrase} {address}. Ваше объявление снова актуально — верно? Если да, готовы подключиться к сдаче.";
-            
-            // Рендеринг шаблона с переменными
-            $renderedMessage = $this->renderTemplate($kickoffMessage, $vars);
-            
-            // Конвертируем Markdown в WhatsApp форматирование (если есть)
-            $renderedMessage = $this->convertMarkdownToWhatsApp($renderedMessage);
-
-            // Отправка непосредственно клиенту БЕЗ GPT обработки
-            if (!empty(trim($renderedMessage))) {
-                Log::info('Отправка стартового сообщения непосредственно клиенту', [
-                    'chatId' => $chatId,
-                    'message_length' => mb_strlen($renderedMessage),
-                ]);
+                // Используем kickoff_message из конфигурации или дефолтное значение (если нет, используем дефолтное)
+                $kickoffMessage = $config?->kickoff_message 
+                    ?? "{greeting}\n\nЯ — ИИ-ассистент Capital Mars. Мы уже {rental_phrase} {address}. Ваше объявление снова актуально — верно? Если да, готовы подключиться к сдаче.";
                 
-                $this->sendMessageWithDelay($chatId, $renderedMessage, 0);
+                // Рендеринг шаблона с переменными
+                $renderedMessage = $this->renderTemplate($kickoffMessage, $vars);
+                
+                // Конвертируем Markdown в WhatsApp форматирование (если есть)
+                $renderedMessage = $this->convertMarkdownToWhatsApp($renderedMessage);
 
-                // Сохранение как сообщение помощника (без использования GPT токенов)
-                Message::create([
-                    'dialog_id' => $dialog->dialog_id,
-                    'role' => 'assistant',
-                    'content' => $renderedMessage,
-                    'previous_response_id' => null,
-                    'tokens_in' => 0,
-                    'tokens_out' => 0,
-                ]);
-            } else {
-                Log::warning('Стартовое сообщение пустое после рендеринга, используем fallback');
-                $fallback = $this->renderTemplate(
-                    "{greeting} Мы ранее работали по вашей квартире на {address}. Подскажите, вы снова её сдаёте?",
-                    [
-                        'greeting' => $vars['greeting'] ?? 'Добрый день!',
-                        'address' => $vars['address'] ?? '',
-                    ]
-                );
-                $fallback = $this->convertMarkdownToWhatsApp($fallback);
-                $this->sendMessageWithDelay($chatId, $fallback, 0);
-                Message::create([
-                    'dialog_id' => $dialog->dialog_id,
-                    'role' => 'assistant',
-                    'content' => $fallback,
-                    'previous_response_id' => null,
-                    'tokens_in' => 0,
-                    'tokens_out' => 0,
-                ]);
+                // Отправка непосредственно клиенту БЕЗ GPT обработки
+                if (!empty(trim($renderedMessage))) {
+                    Log::info('Отправка стартового сообщения непосредственно клиенту', [
+                        'chatId' => $chatId,
+                        'message_length' => mb_strlen($renderedMessage),
+                    ]);
+                    
+                    $this->sendMessageWithDelay($chatId, $renderedMessage, 0);
+
+                    // Сохранение как сообщение помощника (без использования GPT токенов)
+                    Message::create([
+                        'dialog_id' => $dialog->dialog_id,
+                        'role' => 'assistant',
+                        'content' => $renderedMessage,
+                        'previous_response_id' => null,
+                        'tokens_in' => 0,
+                        'tokens_out' => 0,
+                    ]);
+                } else {
+                    Log::warning('Стартовое сообщение пустое после рендеринга, используем fallback');
+                    $fallback = $this->renderTemplate(
+                        "{greeting} Мы ранее работали по вашей квартире на {address}. Подскажите, вы снова её сдаёте?",
+                        [
+                            'greeting' => $vars['greeting'] ?? 'Добрый день!',
+                            'address' => $vars['address'] ?? '',
+                        ]
+                    );
+                    $fallback = $this->convertMarkdownToWhatsApp($fallback);
+                    $this->sendMessageWithDelay($chatId, $fallback, 0);
+                    Message::create([
+                        'dialog_id' => $dialog->dialog_id,
+                        'role' => 'assistant',
+                        'content' => $fallback,
+                        'previous_response_id' => null,
+                        'tokens_in' => 0,
+                        'tokens_out' => 0,
+                    ]);
+                }
+            } catch (\Exception $e) {
+                Log::error('Ошибка при отправке стартового сообщения', [ 'error' => $e->getMessage() ]);
             }
-        } catch (\Exception $e) {
-            Log::error('Ошибка при отправке стартового сообщения', [ 'error' => $e->getMessage() ]);
+        } else {
+            Log::info('Диалог уже содержит сообщения, пропускаем отправку kickoff-сообщения', [
+                'chatId' => $chatId,
+                'existing_messages_count' => $existingMessagesCount,
+            ]);
         }
     }
 
