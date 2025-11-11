@@ -6,10 +6,10 @@
     max-width: 1400px;
     margin: 0 auto;
     padding: 2rem 1rem;
-    height: calc(100vh - 150px);
+    // Убрана фиксированная высота для прокрутки всей страницы
+    min-height: calc(100vh - 150px);
     display: flex;
     flex-direction: column;
-    overflow-x: hidden;
 }
 
 .page-header {
@@ -38,7 +38,7 @@
     grid-template-columns: 400px 1fr;
     gap: 2rem;
     flex: 1;
-    overflow: hidden;
+    // Убран overflow: hidden для прокрутки всей страницы
     
     @include tablet {
         grid-template-columns: 1fr;
@@ -50,7 +50,7 @@
 }
 
 .bots-section {
-    overflow-y: auto;
+    // Убран overflow-y: auto для прокрутки всей страницы
     display: flex;
     flex-direction: column;
     
@@ -58,6 +58,7 @@
         font-size: 1.5rem;
         color: $text-primary;
         margin-bottom: 1.5rem;
+        // Заголовок остается прилипающим при прокрутке страницы
         position: sticky;
         top: 0;
         background: $bg-white;
@@ -85,8 +86,8 @@
     border-radius: $border-radius;
     overflow: hidden;
     background: $bg-white;
-    height: 100%;
-    min-height: 0; // Важно для работы flex и overflow
+    // Убрана фиксированная высота, секция чата растягивается по контенту
+    min-height: 600px; // Минимальная высота для удобства
 }
 
 .chat-header {
