@@ -6,13 +6,19 @@ use App\Models\ScenarioBot;
 use App\Models\ScenarioBotSession;
 use App\Models\ScenarioBotMessage;
 use App\Models\ScenarioStep;
+use App\Services\Messaging\TemplateRenderer;
+use App\Services\Messaging\MessageSender;
+use App\Services\Extraction\ExtractOwnerNameWithAi;
 use Illuminate\Support\Facades\Log;
 
 class ScenarioBotService
 {
     public function __construct(
         private GreenApiService $greenApiService,
-        private RemoteDatabaseService $remoteDbService
+        private RemoteDatabaseService $remoteDbService,
+        private TemplateRenderer $templateRenderer,
+        private MessageSender $messageSender,
+        private ExtractOwnerNameWithAi $nameExtractor,
     ) {}
 
     /**
@@ -67,7 +73,7 @@ class ScenarioBotService
                     $vars = $this->getObjectVariables($existingSession->object_id);
                     
                     // Рендерим приветственное сообщение с переменными
-                    $message = $this->renderTemplate($scenarioBot->welcome_message, $vars);
+                    $message = $this->templateRenderer->render($scenarioBot->welcome_message, $vars);
                     
                     // Добавляем первый вопрос сценария
                     $scenario = $scenarioBot->settings['scenario'] ?? [];
@@ -75,7 +81,7 @@ class ScenarioBotService
                         $message .= "\n\n" . $scenario['step1_question'];
                     }
                     
-                    $this->greenApiService->sendMessage($chatId, $message);
+                    $this->messageSender->sendWithDelay($chatId, $message, 0);
                     
                     // Сохраняем сообщение в БД
                     ScenarioBotMessage::create([
@@ -129,7 +135,7 @@ class ScenarioBotService
                 $vars = $this->getObjectVariables($objectId);
                 
                 // Рендерим приветственное сообщение с переменными
-                $message = $this->renderTemplate($scenarioBot->welcome_message, $vars);
+                $message = $this->templateRenderer->render($scenarioBot->welcome_message, $vars);
                 
                 // Добавляем первый вопрос сценария
                 $scenario = $scenarioBot->settings['scenario'] ?? [];
@@ -137,7 +143,7 @@ class ScenarioBotService
                     $message .= "\n\n" . $scenario['step1_question'];
                 }
                 
-                $this->greenApiService->sendMessage($chatId, $message);
+                $this->messageSender->sendWithDelay($chatId, $message, 0);
                 
                 // Сохраняем сообщение в БД
                 ScenarioBotMessage::create([
@@ -239,7 +245,7 @@ class ScenarioBotService
             $vars['price'] = $response['dialog_data']['new_price_formatted'];
         }
         
-        $response['message'] = $this->renderTemplate($response['message'], $vars);
+        $response['message'] = $this->templateRenderer->render($response['message'], $vars);
 
         // Сохраняем ответ бота в БД
         ScenarioBotMessage::create([
@@ -523,7 +529,7 @@ class ScenarioBotService
 
             // Извлекаем чистое имя владельца
             $ownerNameRaw = $objectData['owner_name'] ?? '';
-            $ownerNameClean = $this->extractOwnerName($ownerNameRaw);
+            $ownerNameClean = $this->nameExtractor->extractOwnerNameWithAI($ownerNameRaw);
 
             // Формируем переменные как в DialogService (поддерживаем оба формата: с подчеркиванием и без)
             $formattedPrice = isset($objectData['price']) ? number_format($objectData['price'], 0, '.', ',') : '';
@@ -564,44 +570,5 @@ class ScenarioBotService
         }
     }
 
-    /**
-     * Рендеринг {placeholders} в шаблоне с переменными
-     */
-    private function renderTemplate(string $template, array $vars): string
-    {
-        $result = $template;
-        foreach ($vars as $key => $value) {
-            $result = str_replace('{' . $key . '}', (string) $value, $result);
-        }
-        return $result;
-    }
-
-    /**
-     * Извлечение чистого имени владельца (из DialogService)
-     */
-    private function extractOwnerName(string $raw): string
-    {
-        $s = $raw;
-        $s = preg_replace('/[\p{So}\p{Sk}]/u', '', $s) ?? $s; // emojis/symbols
-        $s = preg_replace('/["\'\(\)\[\]<>]/u', ' ', $s) ?? $s;
-        $s = preg_replace('/\b(собственник|собст\.?|соб\.?|владелец|агент|ооо|ип)\b/iu', ' ', $s) ?? $s;
-        $s = preg_replace('/[+]?\d[\d\s\-()]{6,}/u', ' ', $s) ?? $s; // phones
-        $s = preg_replace('/[\w.+-]+@\w+\.[\w.]+/u', ' ', $s) ?? $s; // emails
-        $s = preg_replace('/\/.*/u', ' ', $s) ?? $s; // cut after /
-        $s = preg_replace('/[,—-].*/u', ' ', $s) ?? $s; // cut after comma/dash
-        $s = preg_replace('/\s+/u', ' ', trim((string)$s)) ?? trim((string)$s);
-
-        if (preg_match('/\b[А-ЯЁ][а-яё]+(?:-[А-ЯЁ][а-яё]+)?\b/u', $s, $m)) {
-            return $m[0];
-        }
-        // Fallback: title case first token if Cyrillic
-        if (preg_match('/^([А-Яа-яЁё]+(?:-[А-Яа-яЁё]+)?)/u', $s, $m)) {
-            $name = mb_strtolower($m[1]);
-            $parts = explode('-', $name);
-            $parts = array_map(fn($p) => mb_strtoupper(mb_substr($p,0,1)) . mb_substr($p,1), $parts);
-            return implode('-', $parts);
-        }
-        return 'Добрый день';
-    }
 }
 
