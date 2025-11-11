@@ -61,10 +61,10 @@ class RemoteDatabaseService
     private function fetchObjectDataFromDatabase(int $objectId): ?array
     {
         try {
-            // Упрощенный запрос без info_on_site (эта таблица может быть повреждена)
+            // Основной запрос с подзапросом для получения ПЕРВОЙ непустой записи имени
+            // Берем запись с минимальным num где value не пустое
             $result = DB::connection('mysql_remote')
                 ->table('objects as o')
-                ->leftJoin('object_owner_info as ooi', 'o.id', '=', 'ooi.object_id')
                 ->leftJoin('houses as h', 'o.house_id', '=', 'h.house_id')
                 ->leftJoin('complex as c', 'h.complex_id', '=', 'c.id')
                 ->leftJoin(
@@ -74,10 +74,19 @@ class RemoteDatabaseService
                 ->where('o.id', $objectId)
                 ->select([
                     'o.id',
-                    'o.address',
+                    'o.full_address',
                     'o.price',
                     'o.commission_client',
-                    'ooi.value as owner_name',
+                    DB::raw("(
+                        SELECT value 
+                        FROM object_owner_info 
+                        WHERE object_id = o.id 
+                          AND type = 'name'
+                          AND value IS NOT NULL 
+                          AND value != ''
+                        ORDER BY num ASC 
+                        LIMIT 1
+                    ) as owner_name"),
                     'c.name as complex_name',
                     DB::raw('COALESCE(d.deal_count, 0) as deal_count')
                 ])
@@ -88,6 +97,14 @@ class RemoteDatabaseService
                 return null;
             }
 
+            // Логируем сырое значение имени из БД
+            Log::info("Получены данные объекта из БД", [
+                'object_id' => $objectId,
+                'owner_name_from_db' => $result->owner_name,
+                'is_null' => is_null($result->owner_name),
+                'is_empty' => empty($result->owner_name),
+            ]);
+            
             if (!$result->owner_name) {
                 Log::warning("Информация о владельце не найдена для object_id: {$objectId}");
             }
@@ -98,21 +115,19 @@ class RemoteDatabaseService
             $countWordWithSuffix = $this->getCountWordWithSuffix($dealCount);
             $formattedPrice = number_format($result->price, 0, '.', ',');
             
-            // Форматировать адрес с учетом ЖК (ЖК в начале)
-            $address = $result->address;
-            // Добавляем ЖК только если название есть и оно не является дефолтным значением
-            if (!empty($result->complex_name) && 
-                !str_contains(mb_strtolower($result->complex_name), 'нет названия') &&
-                !str_contains(mb_strtolower($result->complex_name), 'без названия')) {
-                $address = 'ЖК ' . $result->complex_name . ', ' . $address;
-            }
+            // Форматируем адрес: убираем "г Москва," или "г. Москва," из начала
+            $address = $result->full_address ?? '';
+            
+            // Удаляем различные варианты "г Москва" из начала адреса
+            $address = preg_replace('/^г\.?\s*Москва,?\s*/iu', '', $address);
+            $address = trim($address);
 
             return [
                 'id' => $result->id,
                 'address' => $address,
                 'price' => $result->price,
                 'commission_client' => $result->commission_client,
-                'owner_name' => $result->owner_name ?? 'Клиент',
+                'owner_name' => $result->owner_name ?? '',  // Пустая строка вместо 'Клиент'
                 'complex_name' => $result->complex_name ?? null,
                 'deal_count' => $dealCount, // Числовое значение количества сделок
                 'count' => $countWord,

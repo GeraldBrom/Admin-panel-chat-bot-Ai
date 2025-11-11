@@ -66,9 +66,22 @@ class DialogService
             return;
         }
 
-        // Очистка имени владельца
-        $rawName = $objectData['owner_name'] ?? 'Клиент';
-        $cleanedName = $this->extractOwnerName($rawName);
+        // Получаем сырое имя владельца из БД (без очистки)
+        $rawOwnerName = $objectData['owner_name'] ?? '';
+        
+        Log::info("Получено сырое имя из БД", [
+            'object_id' => $objectId,
+            'raw_owner_name' => $rawOwnerName,
+        ]);
+        
+        // Извлекаем чистое имя с помощью ИИ для использования в kickoff message
+        $cleanOwnerName = $this->extractOwnerNameWithAI($rawOwnerName);
+        
+        Log::info("Имя после извлечения ИИ", [
+            'object_id' => $objectId,
+            'clean_owner_name' => $cleanOwnerName,
+            'is_empty' => empty($cleanOwnerName),
+        ]);
 
         // Получаем числовое значение deal_count для условной логики
         $dealCount = (int) ($objectData['deal_count'] ?? 0);
@@ -84,12 +97,16 @@ class DialogService
             $rentalPhrase = "{$objectCountWithSuffix} сдавали вашу квартиру на";
         }
 
-        // Подготовка переменных для шаблонов
+        // Формируем приветствие на основе извлеченного ИИ имени
+        if (!empty($cleanOwnerName)) {
+            $greeting = "{$cleanOwnerName}, добрый день!";
+        } else {
+            $greeting = "Добрый день!";
+        }
+        
         $vars = [
-            'name' => $cleanedName,
-            'owner_name' => $cleanedName,
-            'owner_name_clean' => $cleanedName,
-            'ownernameclean' => $cleanedName,
+            'greeting' => $greeting,
+            'owner_name_clean' => $cleanOwnerName,  // Для использования в шаблонах
             'formattedAddDate' => $objectData['formattedAddDate'] ?? '',
             'objectCount' => $objectCountWord,
             'address' => $objectData['address'] ?? '',
@@ -101,7 +118,8 @@ class DialogService
         // Подготовка метаданных для сессии и диалога
         $metadata = [
             'object_id' => $objectId,
-            'owner_name' => $cleanedName,
+            'owner_name_raw' => $rawOwnerName,        // Сырое значение из БД
+            'owner_name_clean' => $cleanOwnerName,    // Извлеченное ИИ имя для использования
             'address' => $objectData['address'] ?? '',
             'object_count' => $objectData['objectCount'] ?? '',
             'add_date' => $objectData['formattedAddDate'] ?? '',
@@ -140,7 +158,7 @@ class DialogService
 
             // Используем kickoff_message из конфигурации или дефолтное значение (если нет, используем дефолтное)
             $kickoffMessage = $config?->kickoff_message 
-                ?? "{ownernameclean}, добрый день!\n\nЯ — ИИ-ассистент Capital Mars. Мы уже {rental_phrase} {address}. {ownernameclean}, что объявление снова актуально — верно? Если да, готовы подключиться к сдаче.";
+                ?? "{greeting}\n\nЯ — ИИ-ассистент Capital Mars. Мы уже {rental_phrase} {address}. Ваше объявление снова актуально — верно? Если да, готовы подключиться к сдаче.";
             
             // Рендеринг шаблона с переменными
             $renderedMessage = $this->renderTemplate($kickoffMessage, $vars);
@@ -169,9 +187,9 @@ class DialogService
             } else {
                 Log::warning('Стартовое сообщение пустое после рендеринга, используем fallback');
                 $fallback = $this->renderTemplate(
-                    "{name}, добрый день! Мы ранее работали по вашей квартире на {address}. Подскажите, вы снова её сдаёте?",
+                    "{greeting} Мы ранее работали по вашей квартире на {address}. Подскажите, вы снова её сдаёте?",
                     [
-                        'name' => $vars['name'] ?? 'Добрый день',
+                        'greeting' => $vars['greeting'] ?? 'Добрый день!',
                         'address' => $vars['address'] ?? '',
                     ]
                 );
@@ -324,6 +342,18 @@ class DialogService
             $metadata = $session->metadata ?? [];
             if (!empty($metadata)) {
                 $contextInfo = "\n\n=== КОНТЕКСТ ОБЪЕКТА ===\n";
+                
+                // Передаем уже извлеченное ИИ имя для использования в обращениях
+                if (!empty($metadata['owner_name_clean'])) {
+                    $contextInfo .= "Имя клиента: {$metadata['owner_name_clean']}\n";
+                    $contextInfo .= "ВАЖНО: Используй это имя для обращения к клиенту (например: '{$metadata['owner_name_clean']}, ...').\n";
+                } elseif (!empty($metadata['owner_name_raw'])) {
+                    $contextInfo .= "Имя клиента в БД (сырое): \"{$metadata['owner_name_raw']}\"\n";
+                    $contextInfo .= "ВАЖНО: Извлеки из этой строки чистое имя по правилам из промпта и используй его для обращения.\n";
+                } else {
+                    $contextInfo .= "Имя клиента: не указано, используй нейтральное обращение без имени\n";
+                }
+                
                 if (!empty($metadata['address'])) {
                     $contextInfo .= "Адрес: {$metadata['address']}\n";
                 }
@@ -335,9 +365,6 @@ class DialogService
                 }
                 if (!empty($metadata['commission_client'])) {
                     $contextInfo .= "Комиссия клиента: {$metadata['commission_client']}\n";
-                }
-                if (!empty($metadata['owner_name'])) {
-                    $contextInfo .= "Имя владельца: {$metadata['owner_name']}\n";
                 }
                 $contextInfo .= "=== КОНЕЦ КОНТЕКСТА ===\n";
                 
@@ -896,6 +923,78 @@ class DialogService
     }
 
     /**
+     * Извлечение имени владельца с помощью ИИ
+     * 
+     * @param string $rawName Сырое значение имени из БД
+     * @return string Извлеченное чистое имя или пустая строка
+     */
+    private function extractOwnerNameWithAI(string $rawName): string
+    {
+        // Если значение пустое или явно некорректное, возвращаем пустую строку
+        $normalized = mb_strtolower(trim($rawName));
+        if (
+            empty($rawName) || 
+            $normalized === '' || 
+            $normalized === 'name' || 
+            $normalized === 'клиент' ||
+            $normalized === 'client'
+        ) {
+            Log::info("Пропуск извлечения имени - некорректное значение", ['raw_name' => $rawName]);
+            return '';
+        }
+
+        try {
+            Log::info("Извлечение имени владельца через ИИ", ['raw_name' => $rawName]);
+            
+            // Промпт для извлечения имени (основан на правилах из основного промпта)
+            $extractionPrompt = "Из строки \"{$rawName}\" извлеки чистое имя владельца на русском языке.\n\n"
+                . "Правила:\n"
+                . "1. Удали скобки, кавычки, эмодзи, телефон/почту, теги типа «(собственник)», «ООО», «агент»\n"
+                . "2. Удали капслок-приставки, хвосты после «/», «,», «—»\n"
+                . "3. Нормализуй пробелы\n"
+                . "4. Возьми первое слово, если это русское имя (буквы А-Я, Ё, дефис допустим)\n"
+                . "5. Первая буква заглавная, остальные строчные\n"
+                . "6. Если имя не найдено — верни пустую строку\n\n"
+                . "ВАЖНО: Верни ТОЛЬКО имя (одно слово) или пустую строку. Без объяснений и лишнего текста.";
+
+            // Используем быстрый и дешевый вызов GPT для извлечения имени
+            $result = $this->openAIService->chat(
+                'Ты - помощник для извлечения имён. Отвечай ТОЛЬКО извлечённым именем или пустой строкой.',
+                [['role' => 'user', 'content' => $extractionPrompt]],
+                0.0,  // Минимальная temperature для детерминированного результата
+                50,   // Максимум 50 токенов (имя должно быть коротким)
+                null,
+                null,
+                'gpt-4o-mini'  // Используем mini модель для экономии
+            );
+
+            $extractedName = trim($result['content'] ?? '');
+            
+            // Проверка: имя должно быть одним словом (или с дефисом) и на кириллице
+            if (!empty($extractedName) && preg_match('/^[А-ЯЁ][а-яё]+(?:-[А-ЯЁ][а-яё]+)?$/u', $extractedName)) {
+                Log::info("Имя успешно извлечено", [
+                    'raw_name' => $rawName,
+                    'extracted_name' => $extractedName,
+                ]);
+                return $extractedName;
+            }
+            
+            Log::warning("ИИ не смогла извлечь корректное имя", [
+                'raw_name' => $rawName,
+                'ai_response' => $extractedName,
+            ]);
+            return '';
+            
+        } catch (\Exception $e) {
+            Log::error("Ошибка при извлечении имени через ИИ", [
+                'raw_name' => $rawName,
+                'error' => $e->getMessage(),
+            ]);
+            return '';
+        }
+    }
+
+    /**
      * Конвертирует Markdown форматирование в WhatsApp форматирование
      * 
      * Markdown (от GPT):          WhatsApp:
@@ -923,32 +1022,5 @@ class DialogService
         return $text;
     }
 
-    /**
-     * Извлечение чистого имени владельца из raw строки с использованием эвристических правил
-     */
-    private function extractOwnerName(string $raw): string
-    {
-        $s = $raw;
-        $s = preg_replace('/[\p{So}\p{Sk}]/u', '', $s) ?? $s; // emojis/symbols
-        $s = preg_replace('/["\'\(\)\[\]<>]/u', ' ', $s) ?? $s;
-        $s = preg_replace('/\b(собственник|собст\.?|соб\.?|владелец|агент|ооо|ип)\b/iu', ' ', $s) ?? $s;
-        $s = preg_replace('/[+]?\d[\d\s\-()]{6,}/u', ' ', $s) ?? $s; // phones
-        $s = preg_replace('/[\w.+-]+@\w+\.[\w.]+/u', ' ', $s) ?? $s; // emails
-        $s = preg_replace('/\/.*/u', ' ', $s) ?? $s; // cut after /
-        $s = preg_replace('/[,—-].*/u', ' ', $s) ?? $s; // cut after comma/dash
-        $s = preg_replace('/\s+/u', ' ', trim((string)$s)) ?? trim((string)$s);
-
-        if (preg_match('/\b[А-ЯЁ][а-яё]+(?:-[А-ЯЁ][а-яё]+)?\b/u', $s, $m)) {
-            return $m[0];
-        }
-        // Fallback: title case first token if Cyrillic (fallback: заглавные буквы первого токена, если кириллический)
-        if (preg_match('/^([А-Яа-яЁё]+(?:-[А-Яа-яЁё]+)?)/u', $s, $m)) {
-            $name = mb_strtolower($m[1]);
-            $parts = explode('-', $name);
-            $parts = array_map(fn($p) => mb_strtoupper(mb_substr($p,0,1)) . mb_substr($p,1), $parts);
-            return implode('-', $parts);
-        }
-        return 'Добрый день';
-    }
 }
 

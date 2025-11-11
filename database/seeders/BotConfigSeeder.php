@@ -19,7 +19,7 @@ class BotConfigSeeder extends Seeder
             'max_tokens' => 2000,
             'vector_store_id_main' => 'vs_6904cd1ffdb081918e282ac233eb07ce',
             'vector_store_id_objections' => 'vs_6904cd74ac8081918552c91c40527af9',
-            'kickoff_message' => "{ownernameclean}, добрый день!\n\nЯ — ИИ-ассистент Capital Mars. Мы уже {rental_phrase} {address}. {ownernameclean}, что объявление снова актуально — верно? Если да, готовы подключиться к сдаче.",
+            'kickoff_message' => "{greeting}\n\nЯ — ИИ-ассистент Capital Mars. Мы уже {rental_phrase} {address}. Видим, ваше объявление снова актуально — верно? Если да, готовы подключиться к сдаче.",
             'vector_stores' => [
                 ['name' => 'Основная база знаний', 'id' => 'vs_6904cd1ffdb081918e282ac233eb07ce'],
                 ['name' => 'База возражений', 'id' => 'vs_6904cd74ac8081918552c91c40527af9'],
