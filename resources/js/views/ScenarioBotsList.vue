@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+import {onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import MainLayout from '@/layouts/MainLayout.vue';
 import { useScenarioBotStore } from '@/stores/scenarioBotStore';
@@ -22,8 +22,6 @@ const editBot = () => {
 const getPlatformIcon = (platform: string) => {
     return {
         'whatsapp': '💬',
-        'telegram': '✈️',
-        'max': '📱',
     }[platform] || '🤖';
 };
 

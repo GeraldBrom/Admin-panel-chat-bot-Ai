@@ -15,7 +15,7 @@ const newSessionForm = ref({
     scenario_bot_id: undefined as number | undefined,
     chat_id: '',
     object_id: 0,
-    platform: 'whatsapp' as 'whatsapp' | 'telegram' | 'max',
+    platform: 'whatsapp',
 });
 
 const loading = computed(() => scenarioBotStore.loading);
@@ -25,7 +25,7 @@ const sessions = computed(() => scenarioBotStore.sessions);
 onMounted(async () => {
     // Загружаем список всех сценарных ботов
     await scenarioBotStore.fetchAllScenarioBots();
-    availableBots.value = scenarioBotStore.scenarioBots; // Все боты, не только активные
+    availableBots.value = scenarioBotStore.scenarioBots;
     
     // Если есть боты, подгружаем сессии первого
     if (availableBots.value.length > 0) {
@@ -136,7 +136,7 @@ const createSession = async () => {
             formatChatId(newSessionForm.value.chat_id),
             botId,
             newSessionForm.value.object_id,
-            'whatsapp' // Всегда WhatsApp
+            'whatsapp'
         );
         
         showCreateSessionModal.value = false;

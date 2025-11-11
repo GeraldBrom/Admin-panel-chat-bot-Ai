@@ -31,27 +31,6 @@ const scenarioForm = ref({
     step3_1_final_message: '',
 });
 
-onMounted(async () => {
-    try {
-        loadError.value = null;
-        await scenarioBotStore.fetchAllScenarioBots();
-        
-        // Загружаем настройки из первого бота
-        if (bots.value.length > 0) {
-            const bot = bots.value[0];
-            scenarioForm.value.welcome_message = bot.welcome_message || '';
-            
-            // Загружаем настройки сценария если есть
-            if (bot.settings?.scenario) {
-                Object.assign(scenarioForm.value, bot.settings.scenario);
-            }
-        }
-    } catch (error) {
-        console.error('Failed to load bots:', error);
-        loadError.value = 'Ошибка загрузки: ' + ((error as any)?.message || 'Неизвестная ошибка');
-    }
-});
-
 const saveConfig = async () => {
     if (!scenarioForm.value.welcome_message || scenarioForm.value.welcome_message.trim() === '') {
         alert('Заполните приветственное сообщение');

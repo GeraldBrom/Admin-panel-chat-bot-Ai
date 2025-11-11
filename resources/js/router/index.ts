@@ -2,7 +2,6 @@ import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router';
 import authService from '@/services/authService';
 
 const Login = () => import('@/views/Login.vue');
-const Dashboard = () => import('@/views/Dashboard.vue');
 const ChatBots = () => import('@/views/ChatBots.vue');
 const BotManagementAi = () => import('@/views/BotManagementAi.vue');
 const ScenarioBotsList = () => import('@/views/ScenarioBotsList.vue');
@@ -13,7 +12,7 @@ const Logs = () => import('@/views/Logs.vue');
 const routes: RouteRecordRaw[] = [
     {
         path: '/',
-        redirect: '/dashboard',
+        redirect: '/chat-bots',
     },
     {
         path: '/login',
@@ -22,15 +21,6 @@ const routes: RouteRecordRaw[] = [
         meta: { 
             requiresGuest: true,
             title: 'Вход',
-        },
-    },
-    {
-        path: '/dashboard',
-        name: 'dashboard',
-        component: Dashboard,
-        meta: { 
-            requiresAuth: true,
-            title: 'Панель управления',
         },
     },
     {

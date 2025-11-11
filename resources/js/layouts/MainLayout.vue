@@ -52,8 +52,6 @@ onUnmounted(() => {
       <div class="container">
         <div class="header-content">
           <nav class="header-nav">
-            <router-link to="/dashboard" active-class="active">Главная</router-link>
-            
             <!-- Dropdown: Чат-боты -->
             <div class="nav-dropdown" @click="toggleChatsDropdown">
               <span class="nav-dropdown__trigger">

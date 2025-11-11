@@ -4,7 +4,7 @@ export interface ScenarioBot {
     id: number;
     name: string;
     description?: string;
-    platform: 'whatsapp' | 'telegram' | 'max';
+    platform: 'whatsapp';
     welcome_message?: string;
     start_step_id?: number;
     is_active: boolean;
@@ -51,7 +51,7 @@ export interface ScenarioBotSession {
     scenario_bot_id: number;
     chat_id: string;
     object_id?: number;
-    platform: 'whatsapp' | 'telegram' | 'max';
+    platform: 'whatsapp';
     current_step_id?: number;
     status: 'running' | 'paused' | 'stopped' | 'completed';
     dialog_data?: Record<string, any>;
@@ -70,7 +70,7 @@ export interface ScenarioBotSession {
 export interface CreateScenarioBotData {
     name: string;
     description?: string;
-    platform: 'whatsapp' | 'telegram' | 'max';
+    platform: 'whatsapp';
     welcome_message?: string;
     is_active?: boolean;
     settings?: Record<string, any>;
@@ -79,7 +79,7 @@ export interface CreateScenarioBotData {
 export interface UpdateScenarioBotData {
     name?: string;
     description?: string;
-    platform?: 'whatsapp' | 'telegram' | 'max';
+    platform?: 'whatsapp';
     welcome_message?: string;
     start_step_id?: number;
     is_active?: boolean;
@@ -114,7 +114,7 @@ export interface StartScenarioBotSessionData {
     scenario_bot_id: number;
     chat_id: string;
     object_id?: number;
-    platform: 'whatsapp' | 'telegram' | 'max';
+    platform: 'whatsapp';
 }
 
 export interface UpdateStepOrderData {

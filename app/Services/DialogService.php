@@ -229,6 +229,13 @@ class DialogService
                 return;
             }
 
+            if($messageText === '{{SWE001}}'){
+                $this->sendMessageWithDelay($chatId,
+                'Пожалуйста, отправьте сообщение еще раз, я не смогла увидеть ваш ответ',
+                0);
+                return;
+            }
+
             // Получить диалог
             $dialog = Dialog::getOrCreate($chatId);
 
