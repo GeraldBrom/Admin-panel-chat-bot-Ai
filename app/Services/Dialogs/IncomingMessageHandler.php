@@ -38,11 +38,24 @@ class IncomingMessageHandler
             }
 
             if ($messageText === '{{SWE001}}') {
-                $this->messageSender->sendWithDelay(
-                    $chatId,
-                    'Пожалуйста, отправьте сообщение еще раз, я не смог увидеть ваш ответ',
-                    0
-                );
+                // Получаем диалог для сохранения сообщения
+                $dialog = Dialog::getOrCreate($chatId);
+                
+                $errorMessage = 'Пожалуйста, отправьте сообщение еще раз, я не смог увидеть ваш ответ';
+                
+                // Отправляем сообщение в WhatsApp
+                $this->messageSender->sendWithDelay($chatId, $errorMessage, 0);
+                
+                // Сохраняем сообщение в БД для отображения на frontend
+                Message::create([
+                    'dialog_id' => $dialog->dialog_id,
+                    'role' => 'assistant',
+                    'content' => $errorMessage,
+                    'previous_response_id' => null,
+                    'tokens_in' => 0,
+                    'tokens_out' => 0,
+                ]);
+                
                 return;
             }
 

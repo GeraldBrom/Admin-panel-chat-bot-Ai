@@ -159,8 +159,7 @@ class DialogInitializer
                     $config = $botConfigId ? BotConfig::find($botConfigId) : null;
 
                     // Используем kickoff_message из конфигурации или дефолтное значение (если нет, используем дефолтное)
-                    $kickoffMessage = $config?->kickoff_message 
-                        ?? "{greeting}\n\nЯ — ИИ-ассистент Capital Mars. Мы уже {rental_phrase} {address}. Ваше объявление снова актуально — верно? Если да, готовы подключиться к сдаче.";
+                    $kickoffMessage = $config?->kickoff_message;
                     
                     // Рендеринг шаблона с переменными
                     $renderedMessage = $this->templateRenderer->render($kickoffMessage, $vars);
