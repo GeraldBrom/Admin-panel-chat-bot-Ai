@@ -4,25 +4,28 @@
 // Chat Bot Card component styles
 .chat-bot-card {
     @include card;
+    padding: $spacing-md; // Переопределяем padding из миксина card
     cursor: pointer;
     transition: all $transition-base;
     
     &:hover {
         box-shadow: $box-shadow-lg;
-        transform: translateY(-2px);
     }
     
     &--selected {
         border: 2px solid $primary-color;
     }
     
-    // header удалён по требованию
     
     &__body {
-        margin-bottom: $spacing-md;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: $spacing-md;
     }
     
     &__info {
+        flex: 1;
         display: flex;
         flex-direction: column;
         gap: $spacing-sm;
@@ -104,13 +107,11 @@
 }
 
 .chat-bot-card__controls {
-    padding-top: $spacing-md;
-    margin-top: $spacing-md;
-    border-top: 1px solid $border-color;
+    display: flex;
+    flex-shrink: 0;
     
     .btn {
-        width: 100%;
-        justify-content: center;
+        white-space: nowrap;
     }
 }
 

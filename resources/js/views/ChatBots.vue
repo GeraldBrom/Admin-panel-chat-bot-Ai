@@ -277,8 +277,16 @@ const sendMessage = async (content: string) => {
         <div v-if="selectedBot" class="chat-section">
           <div class="chat-header">
             <div class="chat-header__info">
-              <h2>{{ selectedBot.chat_id }}</h2>
-              <span class="chat-platform">{{ selectedBot.platform }}</span>
+              <div class="chat-header__title">
+                <h2>{{ selectedBot.chat_id }}</h2>
+                <div class="chat-header__meta">
+                  <span class="chat-platform">{{ selectedBot.platform }}</span>
+                  <span class="chat-meta">
+                    <span class="chat-meta__label">ID объекта</span>
+                    <span class="chat-meta__value">{{ selectedBot.object_id }}</span>
+                  </span>
+                </div>
+              </div>
             </div>
             <div class="chat-header__actions">
               <button 
