@@ -4,114 +4,326 @@
 // Chat Bot Card component styles
 .chat-bot-card {
     @include card;
-    padding: $spacing-md; // Переопределяем padding из миксина card
+    padding: 0;
+    position: relative;
     cursor: pointer;
     transition: all $transition-base;
+    overflow: hidden;
     
     &:hover {
+        transform: translateY(-2px);
         box-shadow: $box-shadow-lg;
     }
     
     &--selected {
         border: 2px solid $primary-color;
+        box-shadow: 0 0 0 3px rgba($primary-color, 0.1);
     }
     
+    // Стили для разных статусов
+    &--running {
+        .status-indicator {
+            background: $success-color;
+        }
+    }
+    
+    &--stopped {
+        .status-indicator {
+            background: $text-secondary;
+        }
+    }
+    
+    &--paused {
+        .status-indicator {
+            background: $warning-color;
+        }
+    }
+    
+    &--completed {
+        .status-indicator {
+            background: #3b82f6;
+        }
+    }
+    
+    // Виды отображения
+    &--list {
+        .chat-bot-card__body {
+            flex-direction: column;
+            gap: $spacing-sm;
+            padding: $spacing-sm $spacing-md;
+        }
+        
+        .chat-bot-card__info {
+            display: grid;
+            grid-template-columns: minmax(180px, auto) 1fr;
+            grid-template-rows: auto auto;
+            gap: $spacing-sm $spacing-md;
+            align-items: center;
+            width: 100%;
+        }
+        
+        // Первая строка: Chat ID и статус
+        .info-header {
+            grid-column: 1 / 2;
+            grid-row: 1 / 2;
+            border-bottom: none;
+            padding-bottom: 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: $spacing-sm;
+            
+            .info-item--primary {
+                flex-direction: row;
+                align-items: center;
+                gap: 0.5rem;
+                flex: 1;
+                min-width: 0;
+                
+                .info-label {
+                    display: none;
+                }
+                
+                .info-value {
+                    font-size: $font-size-base;
+                    font-weight: 600;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                }
+            }
+            
+            .status-badge {
+                flex-shrink: 0;
+            }
+        }
+        
+        // Вторая строка: Детали
+        .info-details {
+            grid-column: 1 / 2;
+            grid-row: 2 / 3;
+            display: flex;
+            flex-direction: row;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .info-item {
+            white-space: nowrap;
+            gap: 0.375rem;
+            flex-shrink: 0;
+            font-size: $font-size-sm;
+            
+            .info-label {
+                display: none;
+            }
+        }
+        
+        // Кнопка занимает правую часть на обе строки
+        .chat-bot-card__controls {
+            grid-column: 2 / 3;
+            grid-row: 1 / 3;
+            flex-shrink: 0;
+            display: flex !important;
+            align-items: center;
+            justify-content: flex-end;
+            
+            .btn {
+                width: auto;
+                min-width: 140px;
+                padding: 0.5rem 1rem;
+                font-size: $font-size-sm;
+                white-space: nowrap;
+            }
+        }
+    }
     
     &__body {
         display: flex;
-        justify-content: space-between;
-        align-items: center;
+        flex-direction: column;
         gap: $spacing-md;
+        padding: $spacing-md;
     }
     
     &__info {
         flex: 1;
         display: flex;
         flex-direction: column;
-        gap: $spacing-sm;
+        gap: $spacing-md;
     }
     
-    &__footer {
+    &__controls {
         display: flex;
-        gap: $spacing-lg;
-        padding-top: $spacing-md;
-        border-top: 1px solid $border-color;
+        flex-shrink: 0;
+        
+        .btn {
+            white-space: nowrap;
+            width: 100%;
+        }
     }
 }
 
-.status {
-    padding: $spacing-xs $spacing-md;
-    border-radius: $border-radius-sm;
-    font-size: $font-size-sm;
-    font-weight: 600;
-    text-transform: uppercase;
+// Индикатор статуса
+.status-indicator {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background: $primary-color;
     
-    &--online {
-        background: rgba($success-color, 0.1);
-        color: $success-color;
+    &--running {
+        background: $success-color;
     }
     
-    &--processing {
-        background: rgba($warning-color, 0.1);
-        color: $warning-color;
+    &--stopped {
+        background: $text-secondary;
     }
     
-    &--offline {
-        background: rgba($text-secondary, 0.1);
-        color: $text-secondary;
+    &--paused {
+        background: $warning-color;
     }
+    
+    &--completed {
+        background: #3b82f6;
+    }
+}
+
+// Анимированная пульсация для активных ботов
+.status-pulse {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: inherit;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+// Информация в карточке
+.info-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: $spacing-sm;
+    padding-bottom: $spacing-sm;
+    border-bottom: 1px solid $border-color;
+}
+
+.info-details {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
 }
 
 .info-item {
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    gap: $spacing-xs;
+    font-size: $font-size-sm;
     
-    .info-label {
-        color: $text-secondary;
-        font-size: $font-size-sm;
-    }
-    
-    .info-value {
-        color: $text-primary;
-        font-weight: 500;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-}
-
-.platform-icon {
-    font-size: 1.25rem;
-}
-
-.stat-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    
-    .stat-number {
-        font-size: $font-size-xl;
-        font-weight: 700;
-        color: $primary-color;
-    }
-    
-    .stat-label {
-        font-size: $font-size-xs;
-        color: $text-secondary;
+    &--primary {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.25rem;
+        
+        .info-value {
+            font-size: $font-size-base;
+        }
     }
 }
 
-.btn--danger:hover {
-    color: $danger-color;
-}
-
-.chat-bot-card__controls {
-    display: flex;
+.info-icon {
+    font-size: 1rem;
+    line-height: 1;
     flex-shrink: 0;
+}
+
+.info-label {
+    color: $text-secondary;
+    font-size: $font-size-xs;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+}
+
+.info-value {
+    color: $text-primary;
+    font-weight: 500;
+    word-break: break-word;
+}
+
+// Бейдж статуса
+.status-badge {
+    padding: 0.25rem 0.625rem;
+    border-radius: $border-radius-sm;
+    font-size: $font-size-xs;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
     
-    .btn {
-        white-space: nowrap;
+    &--running {
+        background: rgba($success-color, 0.15);
+        color: $success-color;
+    }
+    
+    &--stopped {
+        background: rgba($text-secondary, 0.15);
+        color: $text-secondary;
+    }
+    
+    &--paused {
+        background: rgba($warning-color, 0.15);
+        color: $warning-color;
+    }
+    
+    &--completed {
+        background: rgba(#3b82f6, 0.15);
+        color: #3b82f6;
+    }
+}
+
+// Адаптивность для режима списка
+@media (max-width: 768px) {
+    .chat-bot-card--list {
+        .chat-bot-card__info {
+            grid-template-columns: 1fr;
+            grid-template-rows: auto auto auto;
+            gap: $spacing-sm;
+        }
+        
+        .info-header {
+            grid-column: 1 / 2;
+            grid-row: 1 / 2;
+            flex-wrap: wrap;
+        }
+        
+        .info-details {
+            grid-column: 1 / 2;
+            grid-row: 2 / 3;
+        }
+        
+        .chat-bot-card__controls {
+            grid-column: 1 / 2;
+            grid-row: 3 / 4;
+            justify-content: stretch;
+            
+            .btn {
+                width: 100%;
+                min-width: auto;
+            }
+        }
     }
 }
 
